@@ -780,11 +780,11 @@ export default function RestaurantMenu() {
       category: newItem.category || "Entradas",
       images,
       dietary: newItem.dietary || [],
-      calories: newItem.calories || 400,
-      prepTime: newItem.prepTime || "12 min",
       popular: newItem.popular || false,
       chefPick: newItem.chefPick || false,
     };
+    if (newItem.calories) item.calories = newItem.calories;
+    if (newItem.prepTime) item.prepTime = newItem.prepTime;
 
     setMenu((prev) => [...prev, item]);
     try {
@@ -1256,13 +1256,17 @@ export default function RestaurantMenu() {
                           <p className="mt-1 text-sm text-zinc-600 line-clamp-2 leading-relaxed subtitle-font">
                             {item.description}
                           </p>
-                          <div className="mt-3 flex items-center gap-3 text-[12px] text-zinc-500">
-                            <span className="flex items-center gap-1">
-                              <Clock className="size-3.5" /> {item.prepTime}
-                            </span>
-                            <span>•</span>
-                            <span>{item.calories} cal</span>
-                          </div>
+                          {(item.prepTime || item.calories) && (
+                            <div className="mt-3 flex items-center gap-3 text-[12px] text-zinc-500">
+                              {item.prepTime && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="size-3.5" /> {item.prepTime}
+                                </span>
+                              )}
+                              {item.prepTime && item.calories && <span>•</span>}
+                              {item.calories && <span>{item.calories} cal</span>}
+                            </div>
+                          )}
                         </div>
                       </article>
                     ))}
@@ -2231,7 +2235,7 @@ export default function RestaurantMenu() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium">Categoria</label>
                   <input
@@ -2248,10 +2252,21 @@ export default function RestaurantMenu() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Tempo de Preparo</label>
+                  <label className="text-sm font-medium">Tempo (opcional)</label>
                   <input
+                    placeholder="Ex: 15 min"
                     value={editingItem.prepTime || ""}
                     onChange={(e) => setEditingItem({ ...editingItem, prepTime: e.target.value })}
+                    className="w-full border h-11 rounded-xl px-4 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Calorias (opcional)</label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 350"
+                    value={editingItem.calories || ""}
+                    onChange={(e) => setEditingItem({ ...editingItem, calories: parseInt(e.target.value) || undefined })}
                     className="w-full border h-11 rounded-xl px-4 mt-1"
                   />
                 </div>
@@ -2379,7 +2394,7 @@ export default function RestaurantMenu() {
                 onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                 className="w-full border rounded-xl p-4 h-20"
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <input
                   list="categoryOptions"
                   placeholder="Categoria (ex: Cortes, Bebidas)"
@@ -2388,9 +2403,16 @@ export default function RestaurantMenu() {
                   className="border h-11 rounded-xl px-4"
                 />
                 <input
-                  placeholder="Tempo de preparo"
+                  placeholder="Tempo (opcional)"
                   value={newItem.prepTime || ""}
                   onChange={(e) => setNewItem({ ...newItem, prepTime: e.target.value })}
+                  className="border h-11 rounded-xl px-4"
+                />
+                <input
+                  type="number"
+                  placeholder="Calorias (opcional)"
+                  value={newItem.calories || ""}
+                  onChange={(e) => setNewItem({ ...newItem, calories: parseInt(e.target.value) || undefined })}
                   className="border h-11 rounded-xl px-4"
                 />
               </div>
