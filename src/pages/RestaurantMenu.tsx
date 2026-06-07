@@ -1217,18 +1217,7 @@ export default function RestaurantMenu() {
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-transparent" />
-                          <div className="absolute top-3 left-3 flex gap-1.5">
-                            {item.chefPick && (
-                              <span className="px-2 py-1 rounded-full bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                                <ChefHat className="size-3" /> Chef
-                              </span>
-                            )}
-                            {item.popular && (
-                              <span className="px-2 py-1 rounded-full bg-[var(--theme-color)] text-white text-[10px] font-bold uppercase tracking-wider">
-                                Popular
-                              </span>
-                            )}
-                          </div>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
