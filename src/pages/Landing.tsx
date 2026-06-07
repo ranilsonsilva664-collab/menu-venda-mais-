@@ -127,9 +127,8 @@ export default function Landing() {
         </div>
       </form>
       
-      <div className="mt-8 text-sm text-zinc-500 flex flex-col items-center gap-2">
-        <div>Quer ver um exemplo? Acesse <a href="/savore" className="text-amber-600 font-semibold hover:underline">/savore</a></div>
-        <div className="mt-4"><a href="/master-admin" className="text-zinc-400 hover:text-zinc-600 hover:underline">Painel do Administrador Geral</a></div>
+      <div className="mt-8 text-sm text-zinc-500">
+        Quer ver um exemplo? Acesse <a href="/savore" className="text-amber-600 font-semibold hover:underline">/savore</a>
       </div>
     </div>
   );
