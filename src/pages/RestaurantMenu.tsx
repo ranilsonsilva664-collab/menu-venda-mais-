@@ -1065,18 +1065,18 @@ export default function RestaurantMenu() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur text-[11px] font-bold uppercase tracking-widest mb-4">
                   <Tag className="size-3.5" /> Oferta Especial
                 </div>
-                <h2 className="display text-4xl sm:text-5xl leading-[0.95] mb-3">{promoBanner.title}</h2>
-                <p className="text-white/90 text-[15px] leading-relaxed max-w-md mb-6">
+                <h2 className="display text-3xl sm:text-4xl lg:text-5xl leading-[0.95] mb-3 break-words">{promoBanner.title}</h2>
+                <p className="text-white/90 text-sm sm:text-[15px] leading-relaxed max-w-md mb-6">
                   {promoBanner.description}
                 </p>
-                <div className="flex items-end gap-4 mb-6">
-                  <div className="text-white/70 text-lg line-through">
+                <div className="flex flex-wrap items-end gap-2 sm:gap-4 mb-6">
+                  <div className="text-white/70 text-base sm:text-lg line-through">
                     {formatCurrency(promoBanner.oldPrice)}
                   </div>
-                  <div className="text-white text-5xl font-bold display leading-none">
+                  <div className="text-white text-4xl sm:text-5xl font-bold display leading-none">
                     {formatCurrency(promoBanner.newPrice)}
                   </div>
-                  <div className="text-white/90 text-xs font-bold pb-2">
+                  <div className="text-white/90 text-xs font-bold pb-1 sm:pb-2">
                     {promoBanner.oldPrice > 0 &&
                       `-${Math.round(((promoBanner.oldPrice - promoBanner.newPrice) / promoBanner.oldPrice) * 100)}%`}
                   </div>
