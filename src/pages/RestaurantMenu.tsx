@@ -1276,25 +1276,7 @@ export default function RestaurantMenu() {
             </div>
           )}
 
-          <div className="mt-16 p-6 rounded-[1.5rem] bg-white border border-zinc-200">
-            <div className="text-sm font-semibold mb-3">Restrições e Alergênicos</div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(dietaryMeta).map(([key, meta]) => {
-                const Icon = meta.icon;
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs"
-                  >
-                    <span className={cn("size-6 grid place-items-center rounded-full ring-1", meta.color)}>
-                      <Icon className="size-3.5" />
-                    </span>
-                    {meta.label}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+
         </div>
 
         {/* Order Sidebar */}
