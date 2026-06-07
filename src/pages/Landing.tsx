@@ -60,7 +60,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col items-center justify-center p-4">
-      <h1 className="text-4xl font-bold text-zinc-900 mb-4 text-center">Crie seu Cardápio Digital</h1>
+      <h1 className="text-4xl font-bold text-zinc-900 mb-4 text-center">Crie seu Menu Digital</h1>
       <p className="text-zinc-600 mb-8 text-center max-w-md">
         Seja bem-vindo à nossa plataforma! Cadastre seu restaurante, comece com um cardápio de exemplo lindo e receba pedidos no WhatsApp.
       </p>

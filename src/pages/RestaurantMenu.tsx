@@ -461,7 +461,7 @@ export default function RestaurantMenu() {
         if (restDoc.exists()) {
           const data = restDoc.data();
           setRestaurantName(data.name || "Restaurante");
-          document.title = `${data.name || "Restaurante"} • Cardápio Digital`;
+          document.title = `${data.name || "Restaurante"} • Menu Digital`;
           setWhatsappNumber(data.whatsappNumber || "");
           setHeaderSubtitle(data.headerSubtitle || "");
           setHeaderLogo(data.headerLogo || "");
@@ -1759,7 +1759,7 @@ export default function RestaurantMenu() {
                   className="w-full border h-11 rounded-xl px-4"
                   placeholder="Ex: Barber Shop"
                 />
-                <p className="text-xs text-zinc-500 mt-1">Deixe em branco para ocultar. Ex: "Cardápio Digital" ou "Catálogo"</p>
+                <p className="text-xs text-zinc-500 mt-1">Deixe em branco para ocultar. Ex: "Menu Digital" ou "Catálogo"</p>
               </div>
 
               <div>
