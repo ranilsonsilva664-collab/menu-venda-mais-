@@ -1014,13 +1014,7 @@ export default function RestaurantMenu() {
               <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl shadow-amber-900/10 ring-1 ring-black/5">
                 <img src={heroImage} alt="Destaque do chef" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 border border-zinc-200 w-56">
-                <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold">
-                  Escolha do Chef
-                </div>
-                <div className="mt-1 font-semibold">Ribeye Seco</div>
-                <div className="text-xs text-zinc-600 mt-0.5">Manteiga de tutano • 22 min</div>
-              </div>
+
             </div>
           </div>
         </div>
