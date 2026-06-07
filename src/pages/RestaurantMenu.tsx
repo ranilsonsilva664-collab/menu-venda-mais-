@@ -987,8 +987,8 @@ export default function RestaurantMenu() {
               </>
             )}
           </div>
-          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
-            <div>
+          <div className="flex flex-col gap-8">
+            <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-white border border-amber-200 px-3 py-1 text-xs font-medium text-amber-800 mb-4">
                 <Sparkles className="size-3.5" />
                 {heroBadge}
@@ -996,25 +996,26 @@ export default function RestaurantMenu() {
               <h1 className="display text-[48px] sm:text-[64px] leading-[0.9] tracking-tight whitespace-pre-line">
                 {heroTitle}
               </h1>
-              <p className="mt-4 text-zinc-600 max-w-xl text-[15px] leading-relaxed subtitle-font">{heroSubtitle}</p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                {CATEGORIES.slice(1, 6).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => scrollToCategory(cat)}
-                    className="group h-9 px-4 rounded-full bg-white border border-zinc-200 text-sm font-medium hover:border-zinc-300 hover:shadow-sm transition flex items-center gap-1"
-                  >
-                    {cat}
-                    <ChevronRight className="size-3.5 opacity-60 group-hover:translate-x-0.5 transition" />
-                  </button>
-                ))}
-              </div>
+              <p className="mt-4 text-zinc-600 text-[15px] leading-relaxed subtitle-font">{heroSubtitle}</p>
             </div>
-            <div className="relative">
-              <div className="aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl shadow-amber-900/10 ring-1 ring-black/5">
+            
+            <div className="relative w-full">
+              <div className="aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden shadow-2xl shadow-amber-900/10 ring-1 ring-black/5">
                 <img src={heroImage} alt="Destaque do chef" className="w-full h-full object-cover" />
               </div>
+            </div>
 
+            <div className="flex flex-wrap gap-3">
+              {CATEGORIES.slice(1, 6).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => scrollToCategory(cat)}
+                  className="group h-9 px-4 rounded-full bg-white border border-zinc-200 text-sm font-medium hover:border-zinc-300 hover:shadow-sm transition flex items-center gap-1"
+                >
+                  {cat}
+                  <ChevronRight className="size-3.5 opacity-60 group-hover:translate-x-0.5 transition" />
+                </button>
+              ))}
             </div>
           </div>
         </div>
