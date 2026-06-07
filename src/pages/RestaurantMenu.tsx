@@ -989,10 +989,7 @@ export default function RestaurantMenu() {
           </div>
           <div className="flex flex-col gap-8">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-amber-200 px-3 py-1 text-xs font-medium text-amber-800 mb-4">
-                <Sparkles className="size-3.5" />
-                {heroBadge}
-              </div>
+
               <h1 className="display text-[48px] sm:text-[64px] leading-[0.9] tracking-tight whitespace-pre-line">
                 {heroTitle}
               </h1>
