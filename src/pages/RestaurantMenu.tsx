@@ -369,7 +369,7 @@ export default function RestaurantMenu() {
   const [themeTextColor, setThemeTextColor] = useState("#18181b");
 
   // Music configuration
-  const [bgMusic, setBgMusic] = useState("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3");
+  const [bgMusic, setBgMusic] = useState("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3");
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const hasAttemptedAutoplay = useRef(false);
