@@ -369,9 +369,10 @@ export default function RestaurantMenu() {
   const [themeTextColor, setThemeTextColor] = useState("#18181b");
 
   // Music configuration
-  const [bgMusic, setBgMusic] = useState("");
+  const [bgMusic, setBgMusic] = useState("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3");
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const hasAttemptedAutoplay = useRef(false);
 
   // Promo banner state
   const [promoBanner, setPromoBanner] = useState({
@@ -478,7 +479,7 @@ export default function RestaurantMenu() {
           if (data.themeSubtitleFont) setThemeSubtitleFont(data.themeSubtitleFont);
           if (data.themeBgColor) setThemeBgColor(data.themeBgColor);
           if (data.themeTextColor) setThemeTextColor(data.themeTextColor);
-          if (data.bgMusic) setBgMusic(data.bgMusic);
+          if (data.bgMusic !== undefined) setBgMusic(data.bgMusic);
           if (data.promoBanner) setPromoBanner(data.promoBanner);
           if (data.adminPassword) setTenantPassword(data.adminPassword); // we use it for checking
         } else {
@@ -501,6 +502,32 @@ export default function RestaurantMenu() {
     };
     fetchData();
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!bgMusic || hasAttemptedAutoplay.current) return;
+
+    const handleInteraction = () => {
+      if (audioRef.current && !hasAttemptedAutoplay.current) {
+        hasAttemptedAutoplay.current = true;
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(console.error);
+      }
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+      document.removeEventListener("scroll", handleInteraction);
+    };
+
+    document.addEventListener("click", handleInteraction);
+    document.addEventListener("touchstart", handleInteraction, { passive: true });
+    document.addEventListener("scroll", handleInteraction, { passive: true });
+
+    return () => {
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+      document.removeEventListener("scroll", handleInteraction);
+    };
+  }, [bgMusic]);
 
   useEffect(() => {
     if (toast) {
