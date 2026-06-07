@@ -2644,7 +2644,17 @@ export default function RestaurantMenu() {
       )}
 
 
-
+      {/* Floating WhatsApp Button */}
+      {whatsappNumber && (
+        <a
+          href={`https://wa.me/${whatsappNumber}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-[90] size-14 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#20bd5a] hover:-translate-y-1 transition-all"
+        >
+          <MessageCircle className="size-7" />
+        </a>
+      )}
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-zinc-900 text-white text-sm flex items-center gap-2 z-[300]">
