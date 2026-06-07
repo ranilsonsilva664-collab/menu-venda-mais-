@@ -820,6 +820,14 @@ export default function RestaurantMenu() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="size-8 border-4 border-zinc-200 border-t-amber-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen text-[var(--theme-text-color)]" style={{ backgroundColor: themeBgColor, '--theme-text-color': themeTextColor, '--theme-color': themeColor, '--theme-font': `"${themeFont}", system-ui, sans-serif`, '--theme-subtitle-font': `"${themeSubtitleFont}", system-ui, sans-serif` } as React.CSSProperties}>
       <style>{`
