@@ -368,6 +368,11 @@ export default function RestaurantMenu() {
   const [themeBgColor, setThemeBgColor] = useState("#faf7f2");
   const [themeTextColor, setThemeTextColor] = useState("#18181b");
 
+  // Music configuration
+  const [bgMusic, setBgMusic] = useState("");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
   // Promo banner state
   const [promoBanner, setPromoBanner] = useState({
     enabled: true,
@@ -473,6 +478,7 @@ export default function RestaurantMenu() {
           if (data.themeSubtitleFont) setThemeSubtitleFont(data.themeSubtitleFont);
           if (data.themeBgColor) setThemeBgColor(data.themeBgColor);
           if (data.themeTextColor) setThemeTextColor(data.themeTextColor);
+          if (data.bgMusic) setBgMusic(data.bgMusic);
           if (data.promoBanner) setPromoBanner(data.promoBanner);
           if (data.adminPassword) setTenantPassword(data.adminPassword); // we use it for checking
         } else {
@@ -891,6 +897,26 @@ export default function RestaurantMenu() {
                     <LogOut className="size-4" /> Sair
                   </button>
                 </>
+              )}
+              {bgMusic && (
+                <button
+                  onClick={() => {
+                    if (isPlaying) {
+                      audioRef.current?.pause();
+                      setIsPlaying(false);
+                    } else {
+                      audioRef.current?.play();
+                      setIsPlaying(true);
+                    }
+                  }}
+                  className={cn(
+                    "h-10 w-10 rounded-full border text-sm font-medium flex items-center justify-center transition",
+                    isPlaying ? "bg-[var(--theme-color)] text-white border-[var(--theme-color)]" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                  )}
+                  title={isPlaying ? "Pausar música" : "Tocar música"}
+                >
+                  <Music className={cn("size-4", isPlaying && "animate-pulse")} />
+                </button>
               )}
               <button
                 onClick={() => setShowCart(true)}
@@ -1835,7 +1861,18 @@ export default function RestaurantMenu() {
                 </div>
               </div>
 
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+              <div className="border-t pt-4 mt-4">
+                <label className="text-sm font-medium mb-1 block">Música de Fundo (Link do Áudio)</label>
+                <input
+                  value={bgMusic}
+                  onChange={(e) => setBgMusic(e.target.value)}
+                  placeholder="Ex: https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                  className="w-full border h-11 rounded-xl px-4"
+                />
+                <p className="text-xs text-zinc-500 mt-1">Insira um link direto para um arquivo de áudio (.mp3). Opcional.</p>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mt-4">
                 <div className="text-xs font-semibold text-emerald-900 mb-2 flex items-center gap-1.5">
                   <Check className="size-3.5" /> Pré-visualização do link
                 </div>
@@ -1861,7 +1898,8 @@ export default function RestaurantMenu() {
                         themeFont,
                         themeSubtitleFont,
                         themeBgColor,
-                        themeTextColor
+                        themeTextColor,
+                        bgMusic
                       }, { merge: true });
                       setToast("Configurações salvas!");
                     } catch (e: any) {
@@ -2655,6 +2693,10 @@ export default function RestaurantMenu() {
           <MessageCircle className="size-7" />
         </a>
       )}
+
+      {/* Background Music */}
+      {bgMusic && <audio ref={audioRef} src={bgMusic} loop />}
+
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-zinc-900 text-white text-sm flex items-center gap-2 z-[300]">
