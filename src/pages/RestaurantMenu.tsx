@@ -504,30 +504,29 @@ export default function RestaurantMenu() {
   }, [tenantId]);
 
   useEffect(() => {
-    if (!bgMusic || hasAttemptedAutoplay.current) return;
+    if (!bgMusic || isPlaying) return;
 
     const handleInteraction = () => {
-      if (audioRef.current && !hasAttemptedAutoplay.current) {
-        hasAttemptedAutoplay.current = true;
+      if (audioRef.current) {
         audioRef.current.play().then(() => {
           setIsPlaying(true);
-        }).catch(console.error);
+          // Only remove listeners after successful playback
+          document.removeEventListener("click", handleInteraction);
+          document.removeEventListener("touchstart", handleInteraction);
+        }).catch((err) => {
+          console.error("Audio play failed:", err);
+        });
       }
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("touchstart", handleInteraction);
-      document.removeEventListener("scroll", handleInteraction);
     };
 
     document.addEventListener("click", handleInteraction);
     document.addEventListener("touchstart", handleInteraction, { passive: true });
-    document.addEventListener("scroll", handleInteraction, { passive: true });
 
     return () => {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
-      document.removeEventListener("scroll", handleInteraction);
     };
-  }, [bgMusic]);
+  }, [bgMusic, isPlaying]);
 
   useEffect(() => {
     if (toast) {
