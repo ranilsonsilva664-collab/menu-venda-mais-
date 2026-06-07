@@ -660,7 +660,7 @@ export default function RestaurantMenu() {
     grandTotal: number
   ) => {
     const lines: string[] = [];
-    lines.push(`Olá! Vim pelo cardápio digital do *${restaurantName}* e gostaria de fazer um pedido:`);
+    lines.push(`Olá! Vim pelo menu digital do *${restaurantName}* e gostaria de fazer um pedido:`);
     lines.push("");
 
     items.forEach((it, i) => {
