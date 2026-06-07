@@ -1191,9 +1191,6 @@ export default function RestaurantMenu() {
                 <section key={cat} ref={(el) => { categoryRefs.current[cat] = el; }}>
                   <div className="flex items-baseline justify-between mb-5">
                     <h2 className="display text-[32px]">{cat}</h2>
-                    <div className="text-xs uppercase tracking-wider text-zinc-500 font-medium">
-                      {items.length} pratos
-                    </div>
                   </div>
                   <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     {items.map((item) => (
