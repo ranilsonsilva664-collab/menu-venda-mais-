@@ -400,6 +400,9 @@ export default function RestaurantMenu() {
   // Gallery state
   const [galleryIndex, setGalleryIndex] = useState(0);
 
+  // Closed Alert Modal
+  const [showClosedAlert, setShowClosedAlert] = useState(false);
+
   // Global brand / hero state
   const [heroImage, setHeroImage] = useState<string>(
     "https://images.pexels.com/photos/3933217/pexels-photo-3933217.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=1600"
@@ -546,7 +549,7 @@ export default function RestaurantMenu() {
   // Public functions
   const addToCart = (item: MenuItem, opts?: { notes?: string; options?: string[] }) => {
     if (!isStoreOpen()) {
-      setToast("Não estamos no horário de atendimento.");
+      setShowClosedAlert(true);
       return;
     }
     setCart((prev) => {
@@ -759,7 +762,7 @@ export default function RestaurantMenu() {
 
   const openCheckout = () => {
     if (!isStoreOpen()) {
-      setToast("Não estamos no horário de atendimento.");
+      setShowClosedAlert(true);
       return;
     }
     if (cart.length === 0) {
@@ -2809,6 +2812,29 @@ export default function RestaurantMenu() {
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-zinc-900 text-white text-sm flex items-center gap-2 z-[300]">
           <Check className="size-4 text-emerald-400" /> {toast}
+        </div>
+      )}
+
+      {/* Closed Alert Modal */}
+      {showClosedAlert && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex flex-col items-center justify-center p-6 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-black text-white text-center py-5 font-bold text-lg px-4">
+              Estabelecimento fechado
+            </div>
+            <div className="p-8 text-center text-zinc-800 font-medium flex flex-col gap-6">
+              <p className="text-lg leading-relaxed">
+                O estabelecimento abrirá amanhã:<br />
+                {openTime} - {closeTime}
+              </p>
+              <button 
+                onClick={() => setShowClosedAlert(false)}
+                className="w-full h-14 bg-black text-white font-bold rounded-xl text-lg hover:bg-zinc-800 transition active:scale-95"
+              >
+                Ok
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
