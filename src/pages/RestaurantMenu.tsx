@@ -360,6 +360,8 @@ export default function RestaurantMenu() {
   const [restaurantName, setRestaurantName] = useState("Restaurante");
   const [headerSubtitle, setHeaderSubtitle] = useState("");
   const [headerLogo, setHeaderLogo] = useState("");
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
 
   // Theme configuration
   const [themeColor, setThemeColor] = useState("#f59e0b");
@@ -470,6 +472,7 @@ export default function RestaurantMenu() {
           if (data.heroTitle) setHeroTitle(data.heroTitle);
           if (data.heroSubtitle) setHeroSubtitle(data.heroSubtitle);
           if (data.heroBadge) setHeroBadge(data.heroBadge);
+          if (data.headerLogo) setHeaderLogo(data.headerLogo);
           if (data.themeColor) {
             setThemeColor(data.themeColor);
           } else {
@@ -482,6 +485,8 @@ export default function RestaurantMenu() {
           if (data.bgMusic !== undefined) setBgMusic(data.bgMusic);
           if (data.promoBanner) setPromoBanner(data.promoBanner);
           if (data.adminPassword) setTenantPassword(data.adminPassword); // we use it for checking
+          if (data.openTime) setOpenTime(data.openTime);
+          if (data.closeTime) setCloseTime(data.closeTime);
         } else {
           // If restaurant not found, maybe show a 404 or default
           console.warn("Restaurant not found");
@@ -540,6 +545,10 @@ export default function RestaurantMenu() {
 
   // Public functions
   const addToCart = (item: MenuItem, opts?: { notes?: string; options?: string[] }) => {
+    if (!isStoreOpen()) {
+      setToast("Não estamos no horário de atendimento.");
+      return;
+    }
     setCart((prev) => {
       const key = item.id + (opts?.options?.join("|") ?? "") + (opts?.notes ?? "");
       const existing = prev.find((p) => p.id === key);
@@ -723,7 +732,36 @@ export default function RestaurantMenu() {
     window.open(url, "_blank");
   };
 
+  const isStoreOpen = () => {
+    if (!openTime || !closeTime) return true;
+    
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTotalMinutes = currentHours * 60 + currentMinutes;
+    
+    const [openH, openM] = openTime.split(':').map(Number);
+    const openTotalMinutes = openH * 60 + openM;
+    
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+    let closeTotalMinutes = closeH * 60 + closeM;
+    
+    // Handle case where store closes after midnight (e.g. 18:00 to 02:00)
+    if (closeTotalMinutes < openTotalMinutes) {
+      if (currentTotalMinutes >= openTotalMinutes || currentTotalMinutes <= closeTotalMinutes) {
+        return true;
+      }
+      return false;
+    }
+    
+    return currentTotalMinutes >= openTotalMinutes && currentTotalMinutes <= closeTotalMinutes;
+  };
+
   const openCheckout = () => {
+    if (!isStoreOpen()) {
+      setToast("Não estamos no horário de atendimento.");
+      return;
+    }
     if (cart.length === 0) {
       setToast("Adicione itens ao pedido primeiro");
       return;
@@ -880,8 +918,19 @@ export default function RestaurantMenu() {
                   {(restaurantName || "R").charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="leading-tight select-none" onDoubleClick={() => setShowAdminLogin(true)}>
-                <div className="display text-[22px] tracking-tight">{restaurantName || "Restaurante"}</div>
+              <div className="leading-tight select-none flex flex-col justify-center" onDoubleClick={() => setShowAdminLogin(true)}>
+                <div className="flex items-center gap-2">
+                  <div className="display text-[22px] tracking-tight">{restaurantName || "Restaurante"}</div>
+                  {isStoreOpen() ? (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold tracking-widest uppercase mt-0.5 border border-emerald-200">
+                      Aberto
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold tracking-widest uppercase mt-0.5 border border-red-200">
+                      Fechado
+                    </span>
+                  )}
+                </div>
                 {headerSubtitle && <div className="text-[11px] uppercase tracking-widest text-zinc-500 font-medium">{headerSubtitle}</div>}
               </div>
             </div>
@@ -1762,6 +1811,30 @@ export default function RestaurantMenu() {
                   Exemplo: <code className="bg-zinc-100 px-1 rounded">5511987654321</code>
                 </p>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Horário de Abertura</label>
+                  <input
+                    type="time"
+                    value={openTime}
+                    onChange={(e) => setOpenTime(e.target.value)}
+                    className="w-full border h-11 rounded-xl px-4"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Horário de Fechamento</label>
+                  <input
+                    type="time"
+                    value={closeTime}
+                    onChange={(e) => setCloseTime(e.target.value)}
+                    className="w-full border h-11 rounded-xl px-4"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-zinc-500 -mt-2">
+                Deixe ambos em branco para funcionamento 24h.
+              </p>
               
               <div>
                 <label className="text-sm font-medium mb-1 block">Subtítulo do Cabeçalho</label>
@@ -1919,7 +1992,9 @@ export default function RestaurantMenu() {
                         themeSubtitleFont,
                         themeBgColor,
                         themeTextColor,
-                        bgMusic
+                        bgMusic,
+                        openTime,
+                        closeTime
                       }, { merge: true });
                       setToast("Configurações salvas!");
                     } catch (e: any) {
