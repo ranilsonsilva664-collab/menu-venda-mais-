@@ -35,6 +35,7 @@ import {
   Palette,
   Settings,
   Calendar,
+  MapPin,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -364,6 +365,8 @@ export default function RestaurantMenu() {
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
   const [storeType, setStoreType] = useState<"delivery" | "appointment">("delivery");
+  const [locationAddress, setLocationAddress] = useState("");
+  const [showLocationMap, setShowLocationMap] = useState(false);
 
   // Theme configuration
   const [themeColor, setThemeColor] = useState("#f59e0b");
@@ -493,6 +496,8 @@ export default function RestaurantMenu() {
           if (data.openTime) setOpenTime(data.openTime);
           if (data.closeTime) setCloseTime(data.closeTime);
           if (data.storeType) setStoreType(data.storeType);
+          if (data.locationAddress) setLocationAddress(data.locationAddress);
+          if (data.showLocationMap !== undefined) setShowLocationMap(data.showLocationMap);
         } else {
           // If restaurant not found, maybe show a 404 or default
           console.warn("Restaurant not found");
@@ -1380,6 +1385,24 @@ export default function RestaurantMenu() {
           )}
 
 
+        {/* Location Map */}
+        {showLocationMap && locationAddress && (
+          <div className="mt-8 mb-4">
+            <h3 className="display text-2xl mb-4 px-4 sm:px-0 flex items-center gap-2">
+              <MapPin className="size-6 text-[var(--theme-color)]" />
+              Localização
+            </h3>
+            <div className="w-full h-64 sm:h-80 rounded-3xl overflow-hidden border-2 border-zinc-200 shadow-sm relative z-0">
+              <iframe
+                className="w-full h-full"
+                src={`https://www.google.com/maps?q=${encodeURIComponent(locationAddress)}&output=embed`}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </div>
+        )}
         </div>
 
         {/* Order Sidebar */}
@@ -2003,6 +2026,31 @@ export default function RestaurantMenu() {
                 <p className="text-xs text-zinc-500 mt-1">Insira um link direto para um arquivo de áudio (.mp3). Opcional.</p>
               </div>
 
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="size-4 text-emerald-600" /> Mapa de Localização
+                  </label>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={showLocationMap} onChange={(e) => setShowLocationMap(e.target.checked)} />
+                    <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
+                {showLocationMap && (
+                  <div className="mt-2 animate-in fade-in zoom-in duration-200">
+                    <input
+                      value={locationAddress}
+                      onChange={(e) => setLocationAddress(e.target.value)}
+                      placeholder="Ex: Avenida Paulista, 1000, São Paulo - SP"
+                      className="w-full border h-11 rounded-xl px-4"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Digite o endereço completo. O mapa interativo do Google aparecerá no final do cardápio.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mt-4">
                 <div className="text-xs font-semibold text-emerald-900 mb-2 flex items-center gap-1.5">
                   <Check className="size-3.5" /> Pré-visualização do link
@@ -2033,7 +2081,9 @@ export default function RestaurantMenu() {
                         bgMusic,
                         openTime,
                         closeTime,
-                        storeType
+                        storeType,
+                        locationAddress,
+                        showLocationMap
                       }, { merge: true });
                       setToast("Configurações salvas!");
                     } catch (e: any) {
