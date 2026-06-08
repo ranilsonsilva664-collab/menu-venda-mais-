@@ -34,6 +34,7 @@ import {
   Phone,
   Palette,
   Settings,
+  Calendar,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -362,6 +363,7 @@ export default function RestaurantMenu() {
   const [headerLogo, setHeaderLogo] = useState("");
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
+  const [storeType, setStoreType] = useState<"delivery" | "appointment">("delivery");
 
   // Theme configuration
   const [themeColor, setThemeColor] = useState("#f59e0b");
@@ -490,6 +492,7 @@ export default function RestaurantMenu() {
           if (data.adminPassword) setTenantPassword(data.adminPassword); // we use it for checking
           if (data.openTime) setOpenTime(data.openTime);
           if (data.closeTime) setCloseTime(data.closeTime);
+          if (data.storeType) setStoreType(data.storeType);
         } else {
           // If restaurant not found, maybe show a 404 or default
           console.warn("Restaurant not found");
@@ -572,7 +575,7 @@ export default function RestaurantMenu() {
         },
       ];
     });
-    setToast(`${item.name} adicionado ao pedido`);
+    setToast(`${item.name} adicionado ao ${storeType === "appointment" ? "agendamento" : "pedido"}!`);
   };
 
   const updateQty = (id: string, delta: number) => {
@@ -698,7 +701,7 @@ export default function RestaurantMenu() {
     grandTotal: number
   ) => {
     const lines: string[] = [];
-    lines.push(`Olá! Vim pelo menu digital do *${restaurantName}* e gostaria de fazer um pedido:`);
+    lines.push(`Olá! Vim pelo ${storeType === "appointment" ? "catálogo" : "menu"} digital do *${restaurantName}* e gostaria de fazer um ${storeType === "appointment" ? "agendamento" : "pedido"}:`);
     lines.push("");
 
     items.forEach((it, i) => {
@@ -712,7 +715,11 @@ export default function RestaurantMenu() {
 
     lines.push("―――――――――――――");
     lines.push(`Nome: ${info.name || "(não informado)"}`);
-    lines.push(`Endereço: ${info.address || "(retirar no local)"}`);
+    if (storeType === "appointment") {
+      lines.push(`Data/Hora: ${info.address || "(não informado)"}`);
+    } else {
+      lines.push(`Endereço: ${info.address || "(retirar no local)"}`);
+    }
     if (info.notes) lines.push(`Observação: ${info.notes}`);
     lines.push("―――――――――――――");
     lines.push(`*TOTAL: ${formatCurrency(grandTotal)}*`);
@@ -766,7 +773,7 @@ export default function RestaurantMenu() {
       return;
     }
     if (cart.length === 0) {
-      setToast("Adicione itens ao pedido primeiro");
+      setToast(`Adicione itens ao ${storeType === "appointment" ? "agendamento" : "pedido"} primeiro`);
       return;
     }
     setShowCheckout(true);
@@ -783,7 +790,7 @@ export default function RestaurantMenu() {
     setShowCheckout(false);
     setCart([]);
     setCustomer({ name: "", address: "", notes: "" });
-    setToast("Pedido enviado para o WhatsApp!");
+    setToast("Enviado para o WhatsApp!");
   };
 
   const orderPromoNow = () => {
@@ -1008,8 +1015,8 @@ export default function RestaurantMenu() {
                 onClick={() => setShowCart(true)}
                 className="relative h-10 pl-3 pr-4 rounded-full bg-[var(--theme-color)] text-white text-sm font-medium flex items-center gap-2 transition hover:opacity-90"
               >
-                <ShoppingBag className="size-4" />
-                <span className="hidden sm:inline">Pedido</span>
+                {storeType === "appointment" ? <Calendar className="size-4" /> : <ShoppingBag className="size-4" />}
+                <span className="hidden sm:inline">{storeType === "appointment" ? "Agendamentos" : "Pedido"}</span>
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 grid place-items-center rounded-full bg-[var(--theme-color)] text-[11px] font-bold border-2 border-white">
                     {cartCount}
@@ -1380,7 +1387,7 @@ export default function RestaurantMenu() {
           <div className="bg-white rounded-[1.75rem] border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-zinc-200">
               <div className="flex items-center justify-between">
-                <h2 className="display text-2xl">Seu Pedido</h2>
+                <h2 className="display text-2xl">{storeType === "appointment" ? "Seu Agendamento" : "Seu Pedido"}</h2>
                 <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 font-medium">{cartCount} itens</span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">Refeição no local • Mesa 12</p>
@@ -1390,10 +1397,10 @@ export default function RestaurantMenu() {
               {cart.length === 0 ? (
                 <div className="p-8 text-center">
                   <div className="size-12 mx-auto rounded-2xl bg-zinc-100 grid place-items-center mb-3">
-                    <ShoppingBag className="size-5 text-zinc-400" />
+                    {storeType === "appointment" ? <Calendar className="size-5 text-zinc-400" /> : <ShoppingBag className="size-5 text-zinc-400" />}
                   </div>
-                  <div className="font-medium">Seu pedido está vazio</div>
-                  <p className="text-sm text-zinc-600 mt-1">Adicione pratos para começar</p>
+                  <div className="font-medium">{storeType === "appointment" ? "Nenhum serviço selecionado" : "Seu pedido está vazio"}</div>
+                  <p className="text-sm text-zinc-600 mt-1">{storeType === "appointment" ? "Selecione serviços para agendar" : "Adicione pratos para começar"}</p>
                 </div>
               ) : (
                 cart.map((ci) => (
@@ -1791,6 +1798,21 @@ export default function RestaurantMenu() {
             </div>
             <div className="p-6 space-y-5 overflow-y-auto flex-1">
               <div>
+                <label className="text-sm font-medium mb-2 block">Tipo de Negócio</label>
+                <div className="flex gap-2">
+                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition", storeType === "delivery" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
+                    <input type="radio" name="storeType" className="hidden" checked={storeType === "delivery"} onChange={() => setStoreType("delivery")} />
+                    <ShoppingBag className="size-5" />
+                    Delivery / Produtos
+                  </label>
+                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition", storeType === "appointment" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
+                    <input type="radio" name="storeType" className="hidden" checked={storeType === "appointment"} onChange={() => setStoreType("appointment")} />
+                    <Calendar className="size-5" />
+                    Serviços / Agendamento
+                  </label>
+                </div>
+              </div>
+              <div>
                 <label className="text-sm font-medium mb-1 block">Nome do Negócio</label>
                 <input
                   value={restaurantName}
@@ -2010,7 +2032,8 @@ export default function RestaurantMenu() {
                         themeTextColor,
                         bgMusic,
                         openTime,
-                        closeTime
+                        closeTime,
+                        storeType
                       }, { merge: true });
                       setToast("Configurações salvas!");
                     } catch (e: any) {
@@ -2140,7 +2163,7 @@ export default function RestaurantMenu() {
               {/* Resumo */}
               <div className="bg-zinc-50 rounded-2xl p-4">
                 <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-                  Seu pedido ({cart.reduce((s, c) => s + c.quantity, 0)} {cart.reduce((s, c) => s + c.quantity, 0) === 1 ? "item" : "itens"})
+                  {storeType === "appointment" ? "Seu agendamento" : "Seu pedido"} ({cart.reduce((s, c) => s + c.quantity, 0)} {cart.reduce((s, c) => s + c.quantity, 0) === 1 ? "item" : "itens"})
                 </div>
                 <div className="space-y-1.5 text-sm">
                   {cart.map((c) => (
@@ -2171,11 +2194,11 @@ export default function RestaurantMenu() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1 block">Endereço de entrega</label>
+                <label className="text-sm font-medium mb-1 block">{storeType === "appointment" ? "Data e Hora Desejada" : "Endereço de entrega"}</label>
                 <textarea
                   value={customer.address}
                   onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                  placeholder="Rua, número, bairro, cidade (deixe em branco para retirar no local)"
+                  placeholder={storeType === "appointment" ? "Ex: Sexta-feira, dia 15 às 14:30" : "Rua, número, bairro, cidade (deixe em branco para retirar no local)"}
                   rows={2}
                   className="w-full border rounded-xl p-3 resize-none"
                 />
@@ -2193,8 +2216,8 @@ export default function RestaurantMenu() {
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
-                <strong>Importante:</strong> ao confirmar, você será redirecionado para o WhatsApp
-                com a mensagem do pedido pronta para envio.
+                <strong>Importante:</strong> Você será redirecionado para o WhatsApp do restaurante
+                com a mensagem pronta para envio.
               </div>
             </div>
 
@@ -2204,7 +2227,7 @@ export default function RestaurantMenu() {
                 className="w-full h-12 rounded-2xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
               >
                 <MessageCircle className="size-5" />
-                Enviar pedido no WhatsApp
+                Enviar para o WhatsApp
               </button>
               <button
                 onClick={() => setShowCheckout(false)}
@@ -2633,13 +2656,13 @@ export default function RestaurantMenu() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowCart(false)} />
           <div className="absolute inset-x-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl p-5 overflow-y-auto">
             <div className="flex justify-between mb-4">
-              <div className="font-semibold text-xl">Seu Pedido</div>
+              <div className="font-semibold text-xl">{storeType === "appointment" ? "Seu Agendamento" : "Seu Pedido"}</div>
               <button onClick={() => setShowCart(false)}>
                 <X />
               </button>
             </div>
             {cart.length === 0 ? (
-              <div className="py-8 text-center text-zinc-600">Seu pedido está vazio</div>
+              <div className="py-8 text-center text-zinc-600">{storeType === "appointment" ? "Nenhum serviço selecionado" : "Seu pedido está vazio"}</div>
             ) : (
               cart.map((ci) => (
                 <div key={ci.id} className="flex gap-4 mb-4">
@@ -2785,7 +2808,7 @@ export default function RestaurantMenu() {
                 }}
                 className="mt-4 w-full h-12 rounded-2xl bg-zinc-900 text-white font-semibold"
               >
-                Adicionar ao Pedido
+                {storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"}
               </button>
             </div>
           </div>
