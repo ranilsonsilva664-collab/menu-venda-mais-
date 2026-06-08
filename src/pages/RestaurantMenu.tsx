@@ -1832,9 +1832,22 @@ export default function RestaurantMenu() {
                   />
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 -mt-2">
-                Deixe ambos em branco para funcionamento 24h.
-              </p>
+              <div className="flex items-center justify-between -mt-2">
+                <p className="text-xs text-zinc-500">
+                  Deixe ambos em branco para funcionamento 24h.
+                </p>
+                {(openTime || closeTime) && (
+                  <button 
+                    onClick={() => {
+                      setOpenTime("");
+                      setCloseTime("");
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700 font-medium"
+                  >
+                    Limpar (24h)
+                  </button>
+                )}
+              </div>
               
               <div>
                 <label className="text-sm font-medium mb-1 block">Subtítulo do Cabeçalho</label>
