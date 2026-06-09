@@ -33,6 +33,7 @@ import {
   Tag,
   Phone,
   Palette,
+  Settings,
   Calendar,
   MapPin,
 } from "lucide-react";
