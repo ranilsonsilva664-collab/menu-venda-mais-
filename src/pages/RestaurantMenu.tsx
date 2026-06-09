@@ -956,7 +956,7 @@ export default function RestaurantMenu() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Busque pratos, ingredientes..."
+                  placeholder="Busque produtos, categorias..."
                   className="w-full h-10 pl-9 pr-3 rounded-full bg-white border border-zinc-200 text-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[var(--theme-color)]/30 focus:border-[var(--theme-color)] transition"
                 />
               </div>
@@ -1272,7 +1272,7 @@ export default function RestaurantMenu() {
         <div className="min-w-0">
           {grouped.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-zinc-200">
-              <div className="text-2xl display">Nenhum prato encontrado</div>
+              <div className="text-2xl display">Nenhum produto encontrado</div>
               <p className="text-zinc-600 mt-2">Tente ajustar os filtros ou a busca</p>
             </div>
           ) : (
@@ -1423,7 +1423,7 @@ export default function RestaurantMenu() {
                     {storeType === "appointment" ? <Calendar className="size-5 text-zinc-400" /> : <ShoppingBag className="size-5 text-zinc-400" />}
                   </div>
                   <div className="font-medium">{storeType === "appointment" ? "Nenhum serviço selecionado" : "Seu pedido está vazio"}</div>
-                  <p className="text-sm text-zinc-600 mt-1">{storeType === "appointment" ? "Selecione serviços para agendar" : "Adicione pratos para começar"}</p>
+                  <p className="text-sm text-zinc-600 mt-1">{storeType === "appointment" ? "Selecione serviços para agendar" : "Adicione itens para começar"}</p>
                 </div>
               ) : (
                 cart.map((ci) => (
@@ -2577,7 +2577,7 @@ export default function RestaurantMenu() {
             <div className="space-y-4">
               <div className="flex gap-4">
                 <input
-                  placeholder="Nome do prato"
+                  placeholder="Nome do produto"
                   value={newItem.name || ""}
                   onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                   className="flex-1 border h-11 rounded-xl px-4"
