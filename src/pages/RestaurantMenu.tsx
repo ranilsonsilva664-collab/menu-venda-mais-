@@ -721,7 +721,13 @@ export default function RestaurantMenu() {
     lines.push("―――――――――――――");
     lines.push(`Nome: ${info.name || "(não informado)"}`);
     if (storeType === "appointment") {
-      lines.push(`Data/Hora: ${info.address || "(não informado)"}`);
+      let displayDate = info.address || "(não informado)";
+      if (displayDate && displayDate.includes("T")) {
+        const [d, t] = displayDate.split("T");
+        const [yyyy, mm, dd] = d.split("-");
+        displayDate = `${dd}/${mm}/${yyyy} às ${t}`;
+      }
+      lines.push(`Data/Hora: ${displayDate}`);
     } else {
       lines.push(`Endereço: ${info.address || "(retirar no local)"}`);
     }
@@ -2245,13 +2251,22 @@ export default function RestaurantMenu() {
 
               <div>
                 <label className="text-sm font-medium mb-1 block">{storeType === "appointment" ? "Data e Hora Desejada" : "Endereço de entrega"}</label>
-                <textarea
-                  value={customer.address}
-                  onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                  placeholder={storeType === "appointment" ? "Ex: Sexta-feira, dia 15 às 14:30" : "Rua, número, bairro, cidade (deixe em branco para retirar no local)"}
-                  rows={2}
-                  className="w-full border rounded-xl p-3 resize-none"
-                />
+                {storeType === "appointment" ? (
+                  <input
+                    type="datetime-local"
+                    value={customer.address}
+                    onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                    className="w-full border h-11 rounded-xl px-4"
+                  />
+                ) : (
+                  <textarea
+                    value={customer.address}
+                    onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                    placeholder="Rua, número, bairro, cidade (deixe em branco para retirar no local)"
+                    rows={2}
+                    className="w-full border rounded-xl p-3 resize-none"
+                  />
+                )}
               </div>
 
               <div>
@@ -2259,7 +2274,7 @@ export default function RestaurantMenu() {
                 <textarea
                   value={customer.notes}
                   onChange={(e) => setCustomer({ ...customer, notes: e.target.value })}
-                  placeholder="Ex: sem cebola, troco para R$50, etc."
+                  placeholder={storeType === "appointment" ? "Ex: Detalhe importante, observação para o serviço..." : "Ex: sem cebola, troco para R$50, etc."}
                   rows={2}
                   className="w-full border rounded-xl p-3 resize-none"
                 />
