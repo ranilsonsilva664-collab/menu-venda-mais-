@@ -2597,13 +2597,20 @@ export default function RestaurantMenu() {
                 className="w-full border rounded-xl p-4 h-20"
               />
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <input
-                  list="categoryOptions"
-                  placeholder="Categoria (ex: Cortes, Bebidas)"
-                  value={newItem.category || ""}
-                  onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
-                  className="border h-11 rounded-xl px-4"
-                />
+                <div>
+                  <input
+                    list="categoryOptions"
+                    placeholder="Categoria (ex: Cortes, Bebidas)"
+                    value={newItem.category || ""}
+                    onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                    className="w-full border h-11 rounded-xl px-4"
+                  />
+                  <datalist id="categoryOptions">
+                    {dynamicCategories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </div>
                 <input
                   placeholder="Tempo (opcional)"
                   value={newItem.prepTime || ""}
