@@ -36,6 +36,7 @@ import {
   Settings,
   Calendar,
   MapPin,
+  Music,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
