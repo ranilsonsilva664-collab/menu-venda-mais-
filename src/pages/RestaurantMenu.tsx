@@ -33,10 +33,8 @@ import {
   Tag,
   Phone,
   Palette,
-  Settings,
   Calendar,
   MapPin,
-  Music,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -377,9 +375,6 @@ export default function RestaurantMenu() {
   const [themeTextColor, setThemeTextColor] = useState("#18181b");
 
   // Music configuration
-  const [bgMusic, setBgMusic] = useState("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const hasAttemptedAutoplay = useRef(false);
 
   // Promo banner state
@@ -491,7 +486,6 @@ export default function RestaurantMenu() {
           if (data.themeSubtitleFont) setThemeSubtitleFont(data.themeSubtitleFont);
           if (data.themeBgColor) setThemeBgColor(data.themeBgColor);
           if (data.themeTextColor) setThemeTextColor(data.themeTextColor);
-          if (data.bgMusic !== undefined) setBgMusic(data.bgMusic);
           if (data.promoBanner) setPromoBanner(data.promoBanner);
           if (data.adminPassword) setTenantPassword(data.adminPassword); // we use it for checking
           if (data.openTime) setOpenTime(data.openTime);
@@ -519,31 +513,6 @@ export default function RestaurantMenu() {
     };
     fetchData();
   }, [tenantId]);
-
-  useEffect(() => {
-    if (!bgMusic || isPlaying) return;
-
-    const handleInteraction = () => {
-      if (audioRef.current) {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-          // Only remove listeners after successful playback
-          document.removeEventListener("click", handleInteraction);
-          document.removeEventListener("touchstart", handleInteraction);
-        }).catch((err) => {
-          console.error("Audio play failed:", err);
-        });
-      }
-    };
-
-    document.addEventListener("click", handleInteraction);
-    document.addEventListener("touchstart", handleInteraction, { passive: true });
-
-    return () => {
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("touchstart", handleInteraction);
-    };
-  }, [bgMusic, isPlaying]);
 
   useEffect(() => {
     if (toast) {
@@ -1002,26 +971,6 @@ export default function RestaurantMenu() {
                     <LogOut className="size-4" /> Sair
                   </button>
                 </>
-              )}
-              {bgMusic && (
-                <button
-                  onClick={() => {
-                    if (isPlaying) {
-                      audioRef.current?.pause();
-                      setIsPlaying(false);
-                    } else {
-                      audioRef.current?.play();
-                      setIsPlaying(true);
-                    }
-                  }}
-                  className={cn(
-                    "h-10 w-10 rounded-full border text-sm font-medium flex items-center justify-center transition",
-                    isPlaying ? "bg-[var(--theme-color)] text-white border-[var(--theme-color)]" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                  )}
-                  title={isPlaying ? "Pausar música" : "Tocar música"}
-                >
-                  <Music className={cn("size-4", isPlaying && "animate-pulse")} />
-                </button>
               )}
               <button
                 onClick={() => setShowCart(true)}
@@ -2021,18 +1970,6 @@ export default function RestaurantMenu() {
                   </select>
                 </div>
               </div>
-
-              <div className="border-t pt-4 mt-4">
-                <label className="text-sm font-medium mb-1 block">Música de Fundo (Link do Áudio)</label>
-                <input
-                  value={bgMusic}
-                  onChange={(e) => setBgMusic(e.target.value)}
-                  placeholder="Ex: https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-                  className="w-full border h-11 rounded-xl px-4"
-                />
-                <p className="text-xs text-zinc-500 mt-1">Insira um link direto para um arquivo de áudio (.mp3). Opcional.</p>
-              </div>
-
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium flex items-center gap-2">
@@ -2085,7 +2022,6 @@ export default function RestaurantMenu() {
                         themeSubtitleFont,
                         themeBgColor,
                         themeTextColor,
-                        bgMusic,
                         openTime,
                         closeTime,
                         storeType,
@@ -2901,10 +2837,7 @@ export default function RestaurantMenu() {
         </a>
       )}
 
-      {/* Background Music */}
-      {bgMusic && <audio ref={audioRef} src={bgMusic} loop />}
-
-      {/* Toast */}
+      {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-zinc-900 text-white text-sm flex items-center gap-2 z-[300]">
           <Check className="size-4 text-emerald-400" /> {toast}
