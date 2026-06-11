@@ -36,6 +36,9 @@ import {
   Settings,
   Calendar,
   MapPin,
+  DollarSign,
+  ArrowUpCircle,
+  ArrowDownCircle,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -65,6 +68,14 @@ type CartItem = {
   quantity: number;
   notes?: string;
   options?: string[];
+};
+
+export type Transaction = {
+  id: string;
+  type: "entry" | "exit";
+  description: string;
+  value: number;
+  date: string;
 };
 
 const dietaryMeta: Record<Dietary, { label: string; icon: React.ComponentType<any>; color: string }> = {
@@ -352,6 +363,12 @@ export default function RestaurantMenu() {
   const [showPromoEditor, setShowPromoEditor] = useState(false);
   const [showWhatsAppEditor, setShowWhatsAppEditor] = useState(false);
   const [showReviewsEditor, setShowReviewsEditor] = useState(false);
+  const [showFinanceEditor, setShowFinanceEditor] = useState(false);
+
+  // Finance states
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({ type: "entry" });
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   // Checkout (WhatsApp)
   const [showCheckout, setShowCheckout] = useState(false);
@@ -514,6 +531,27 @@ export default function RestaurantMenu() {
     };
     fetchData();
   }, [tenantId]);
+
+  // Fetch transactions when admin logs in
+  useEffect(() => {
+    if (!isAdmin || !tenantId) return;
+    const fetchTransactions = async () => {
+      setLoadingTransactions(true);
+      try {
+        const transRef = collection(db, "restaurants", tenantId, "transactions");
+        const transSnap = await getDocs(transRef);
+        const fetched = transSnap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
+        // Sort by date descending
+        fetched.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTransactions(fetched);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingTransactions(false);
+      }
+    };
+    fetchTransactions();
+  }, [isAdmin, tenantId]);
 
   useEffect(() => {
     if (toast) {
@@ -2296,6 +2334,15 @@ export default function RestaurantMenu() {
                   <Plus className="size-4" /> Item
                 </button>
                 <button
+                  onClick={() => {
+                    setShowFinanceEditor(true);
+                    setShowAdminPanel(false);
+                  }}
+                  className="flex items-center gap-2 px-3 h-10 bg-indigo-600 text-white rounded-2xl text-sm font-medium"
+                >
+                  <DollarSign className="size-4" /> Financeiro
+                </button>
+                <button
                   onClick={logoutAdmin}
                   className="flex items-center gap-2 px-3 h-10 border rounded-2xl text-sm"
                 >
@@ -2836,6 +2883,162 @@ export default function RestaurantMenu() {
         >
           <MessageCircle className="size-7" />
         </a>
+      )}
+
+      {/* FINANCE EDITOR */}
+      {showFinanceEditor && isAdmin && (
+        <div className="fixed inset-0 z-[180] bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-indigo-100 rounded-xl grid place-items-center">
+                  <DollarSign className="size-5 text-indigo-700" />
+                </div>
+                <div className="text-xl font-semibold">Gestão Financeira</div>
+              </div>
+              <button onClick={() => setShowFinanceEditor(false)}><X /></button>
+            </div>
+            
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-zinc-50/50">
+              {/* Dashboard */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col">
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Entradas</span>
+                  <div className="text-xl font-bold text-emerald-600 flex items-center gap-2">
+                    <ArrowUpCircle className="size-5" />
+                    {formatCurrency(transactions.filter(t => t.type === "entry").reduce((a, b) => a + b.value, 0))}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col">
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saídas</span>
+                  <div className="text-xl font-bold text-rose-600 flex items-center gap-2">
+                    <ArrowDownCircle className="size-5" />
+                    {formatCurrency(transactions.filter(t => t.type === "exit").reduce((a, b) => a + b.value, 0))}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col">
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saldo</span>
+                  <div className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+                    <DollarSign className="size-5" />
+                    {formatCurrency(transactions.reduce((a, b) => b.type === "entry" ? a + b.value : a - b.value, 0))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Transaction Form */}
+              <div className="bg-white p-5 rounded-2xl border shadow-sm">
+                <h3 className="text-sm font-semibold mb-4">Novo Lançamento</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                  <div className="sm:col-span-3">
+                    <label className="text-xs font-medium mb-1 block">Tipo</label>
+                    <select
+                      value={newTransaction.type}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value as "entry" | "exit" })}
+                      className="w-full border h-10 rounded-xl px-3 text-sm"
+                    >
+                      <option value="entry">Entrada</option>
+                      <option value="exit">Saída</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-5">
+                    <label className="text-xs font-medium mb-1 block">Descrição</label>
+                    <input
+                      placeholder="Ex: Venda Mesa 04"
+                      value={newTransaction.description || ""}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                      className="w-full border h-10 rounded-xl px-3 text-sm"
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="text-xs font-medium mb-1 block">Valor (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newTransaction.value || ""}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, value: parseFloat(e.target.value) })}
+                      className="w-full border h-10 rounded-xl px-3 text-sm"
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <button
+                      disabled={!newTransaction.description || !newTransaction.value}
+                      onClick={async () => {
+                        if (!tenantId || !newTransaction.description || !newTransaction.value) return;
+                        const t: Transaction = {
+                          id: "t" + Date.now(),
+                          type: newTransaction.type as "entry" | "exit",
+                          description: newTransaction.description,
+                          value: newTransaction.value,
+                          date: new Date().toISOString()
+                        };
+                        
+                        setTransactions([t, ...transactions]);
+                        setNewTransaction({ type: "entry", description: "", value: 0 });
+                        
+                        try {
+                          const docRef = doc(db, "restaurants", tenantId, "transactions", t.id);
+                          await setDoc(docRef, t);
+                          setToast("Lançamento adicionado");
+                        } catch (err) {
+                          console.error(err);
+                          alert("Erro ao salvar lançamento");
+                        }
+                      }}
+                      className="h-10 w-full bg-indigo-600 text-white rounded-xl flex items-center justify-center disabled:opacity-50"
+                    >
+                      <Plus className="size-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transactions List */}
+              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                {loadingTransactions ? (
+                  <div className="p-8 text-center text-zinc-500 text-sm">Carregando...</div>
+                ) : transactions.length === 0 ? (
+                  <div className="p-8 text-center text-zinc-500 text-sm">Nenhum lançamento registrado.</div>
+                ) : (
+                  <div className="divide-y">
+                    {transactions.map(t => (
+                      <div key={t.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("size-8 rounded-full grid place-items-center", t.type === "entry" ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600")}>
+                            {t.type === "entry" ? <ArrowUpCircle className="size-4" /> : <ArrowDownCircle className="size-4" />}
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm text-zinc-900">{t.description}</div>
+                            <div className="text-xs text-zinc-500">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className={cn("font-bold text-sm", t.type === "entry" ? "text-emerald-600" : "text-rose-600")}>
+                            {t.type === "entry" ? "+" : "-"}{formatCurrency(t.value)}
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (!tenantId || !confirm("Tem certeza que deseja apagar?")) return;
+                              setTransactions(transactions.filter(x => x.id !== t.id));
+                              try {
+                                await deleteDoc(doc(db, "restaurants", tenantId, "transactions", t.id));
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                            className="p-1.5 text-zinc-400 hover:text-red-500 transition rounded-lg hover:bg-red-50"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Notification */}
