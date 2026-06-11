@@ -747,7 +747,7 @@ export default function RestaurantMenu() {
     return lines.join("\n");
   };
 
-  const sendWhatsApp = async (
+  const sendWhatsApp = (
     items: { name: string; quantity: number; price: number; notes?: string }[],
     info: { name: string; address: string; notes: string },
     grandTotal: number
@@ -770,13 +770,15 @@ export default function RestaurantMenu() {
           date: new Date().toISOString()
         };
         const docRef = doc(db, "restaurants", tenantId, "transactions", tId);
-        await setDoc(docRef, t);
+        
+        // Execute background write without awaiting so browser doesn't block window.open
+        setDoc(docRef, t).catch(err => console.error("Failed to save automatic transaction", err));
         
         if (isAdmin) {
           setTransactions(prev => [t, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         }
       } catch (err) {
-        console.error("Failed to save automatic transaction", err);
+        console.error(err);
       }
     }
 
