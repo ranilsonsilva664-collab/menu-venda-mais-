@@ -747,7 +747,7 @@ export default function RestaurantMenu() {
     return lines.join("\n");
   };
 
-  const sendWhatsApp = (
+  const sendWhatsApp = async (
     items: { name: string; quantity: number; price: number; notes?: string }[],
     info: { name: string; address: string; notes: string },
     grandTotal: number
@@ -758,6 +758,28 @@ export default function RestaurantMenu() {
       setToast("Configure o número do WhatsApp no painel admin");
       return;
     }
+
+    if (tenantId) {
+      try {
+        const tId = "t" + Date.now();
+        const t: Transaction = {
+          id: tId,
+          type: "entry",
+          description: `Pedido: ${info.name || "Cliente"}`,
+          value: grandTotal,
+          date: new Date().toISOString()
+        };
+        const docRef = doc(db, "restaurants", tenantId, "transactions", tId);
+        await setDoc(docRef, t);
+        
+        if (isAdmin) {
+          setTransactions(prev => [t, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        }
+      } catch (err) {
+        console.error("Failed to save automatic transaction", err);
+      }
+    }
+
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
