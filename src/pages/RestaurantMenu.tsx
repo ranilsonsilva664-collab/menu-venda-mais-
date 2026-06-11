@@ -2901,26 +2901,26 @@ export default function RestaurantMenu() {
             
             <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-zinc-50/50">
               {/* Dashboard */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col">
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Entradas</span>
-                  <div className="text-xl font-bold text-emerald-600 flex items-center gap-2">
-                    <ArrowUpCircle className="size-5" />
-                    {formatCurrency(transactions.filter(t => t.type === "entry").reduce((a, b) => a + b.value, 0))}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
+                  <span className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Entradas</span>
+                  <div className="text-sm sm:text-xl font-bold text-emerald-600 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                    <ArrowUpCircle className="size-4 sm:size-5 shrink-0" />
+                    <span>{formatCurrency(transactions.filter(t => t.type === "entry").reduce((a, b) => a + b.value, 0))}</span>
                   </div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col">
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saídas</span>
-                  <div className="text-xl font-bold text-rose-600 flex items-center gap-2">
-                    <ArrowDownCircle className="size-5" />
-                    {formatCurrency(transactions.filter(t => t.type === "exit").reduce((a, b) => a + b.value, 0))}
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
+                  <span className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saídas</span>
+                  <div className="text-sm sm:text-xl font-bold text-rose-600 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                    <ArrowDownCircle className="size-4 sm:size-5 shrink-0" />
+                    <span>{formatCurrency(transactions.filter(t => t.type === "exit").reduce((a, b) => a + b.value, 0))}</span>
                   </div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border shadow-sm flex flex-col">
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saldo</span>
-                  <div className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-                    <DollarSign className="size-5" />
-                    {formatCurrency(transactions.reduce((a, b) => b.type === "entry" ? a + b.value : a - b.value, 0))}
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
+                  <span className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saldo</span>
+                  <div className="text-sm sm:text-xl font-bold text-zinc-900 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                    <DollarSign className="size-4 sm:size-5 shrink-0" />
+                    <span>{formatCurrency(transactions.reduce((a, b) => b.type === "entry" ? a + b.value : a - b.value, 0))}</span>
                   </div>
                 </div>
               </div>
