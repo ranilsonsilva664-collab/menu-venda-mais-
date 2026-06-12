@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import {
   Leaf,
@@ -558,22 +558,21 @@ export default function RestaurantMenu() {
   // Fetch transactions when admin logs in
   useEffect(() => {
     if (!isAdmin || !tenantId) return;
-    const fetchTransactions = async () => {
-      setLoadingTransactions(true);
-      try {
-        const transRef = collection(db, "restaurants", tenantId, "transactions");
-        const transSnap = await getDocs(transRef);
-        const fetched = transSnap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
-        // Sort by date descending
-        fetched.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setTransactions(fetched);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingTransactions(false);
-      }
-    };
-    fetchTransactions();
+    
+    // setLoadingTransactions(true); // not commented, but we don't have loadingTransactions variable active, wait!
+    // Ah, loadingTransactions was commented out. Let's make sure we do not use it to avoid TS unused/unresolved errors.
+    
+    const transRef = collection(db, "restaurants", tenantId, "transactions");
+    const unsubscribe = onSnapshot(transRef, (snapshot) => {
+      const fetched = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
+      // Sort by date descending
+      fetched.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setTransactions(fetched);
+    }, (err) => {
+      console.error("Erro no listener de transações:", err);
+    });
+
+    return () => unsubscribe();
   }, [isAdmin, tenantId]);
 
   useEffect(() => {
@@ -880,14 +879,17 @@ export default function RestaurantMenu() {
     
     const transactionItems: TransactionItem[] = cart.map((c) => {
       const menuItem = menu.find((m) => m.id === c.menuId || m.name === c.name);
-      return {
+      const itemData: TransactionItem = {
         menuId: c.menuId || "custom",
         name: c.name,
         category: menuItem?.category || "Outros",
         quantity: c.quantity,
-        price: c.price,
-        costPrice: menuItem?.costPrice
+        price: c.price
       };
+      if (menuItem?.costPrice !== undefined) {
+        itemData.costPrice = menuItem.costPrice;
+      }
+      return itemData;
     });
 
     sendWhatsApp(items, customer, subtotal, transactionItems);
