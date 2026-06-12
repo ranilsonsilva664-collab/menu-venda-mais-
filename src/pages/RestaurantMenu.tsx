@@ -43,6 +43,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Sparkles,
+  Truck,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -91,6 +92,19 @@ export type TransactionItem = {
   quantity: number;
   price: number;
   costPrice?: number;
+};
+
+export type DeliveryNeighborhood = {
+  id: string;
+  name: string;
+  fee: number;
+  freeShipping?: boolean;
+};
+
+export type DeliverySettings = {
+  enabled: boolean;
+  freeShippingOver?: number;
+  neighborhoods: DeliveryNeighborhood[];
 };
 
 export type Coupon = {
@@ -402,7 +416,7 @@ export default function RestaurantMenu() {
   const [showWhatsAppEditor, setShowWhatsAppEditor] = useState(false);
   const [showReviewsEditor, setShowReviewsEditor] = useState(false);
   const [showFinanceEditor, setShowFinanceEditor] = useState(false);
-  const [gestaoTab, setGestaoTab] = useState<"dashboard" | "estoque" | "financeiro" | "relatorios" | "alertas" | "cupons">("dashboard");
+  const [gestaoTab, setGestaoTab] = useState<"dashboard" | "estoque" | "financeiro" | "relatorios" | "alertas" | "cupons" | "entregas">("dashboard");
   
   // Coupon states
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -424,6 +438,11 @@ export default function RestaurantMenu() {
   const [newCouponValue, setNewCouponValue] = useState<number>(0);
   const [newCouponExpiryDate, setNewCouponExpiryDate] = useState("");
   const [newCouponUsageLimit, setNewCouponUsageLimit] = useState("");
+  
+  // Delivery states
+  const [newNeighborhoodName, setNewNeighborhoodName] = useState("");
+  const [newNeighborhoodFee, setNewNeighborhoodFee] = useState<number>(0);
+  const [newNeighborhoodFreeShipping, setNewNeighborhoodFreeShipping] = useState(false);
   // const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   // Checkout (WhatsApp)
@@ -444,6 +463,8 @@ export default function RestaurantMenu() {
   const [locationAddress, setLocationAddress] = useState("");
   const [showLocationMap, setShowLocationMap] = useState(false);
   const [enableInventory, setEnableInventory] = useState(false);
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>({ enabled: false, neighborhoods: [] });
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState("");
 
   // Theme configuration
   const [themeColor, setThemeColor] = useState("#f59e0b");
@@ -544,9 +565,24 @@ export default function RestaurantMenu() {
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const discountAmount = appliedCoupon ? getCouponDiscount(appliedCoupon, subtotal) : 0;
   const discountedTotal = subtotal - discountAmount;
+
+  const getDeliveryFee = () => {
+    if (storeType !== "delivery") return 0;
+    if (!deliverySettings.enabled) return 0;
+    if (appliedCoupon?.type === "free_shipping") return 0;
+    if (deliverySettings.freeShippingOver && discountedTotal >= deliverySettings.freeShippingOver) return 0;
+
+    const neighborhood = deliverySettings.neighborhoods.find(n => n.id === selectedNeighborhoodId);
+    if (!neighborhood) return 0;
+    if (neighborhood.freeShipping) return 0;
+
+    return neighborhood.fee;
+  };
+
+  const deliveryFee = getDeliveryFee();
   const tax = subtotal * 0.0875;
   const tip = subtotal * 0.18;
-  const total = subtotal + tax + tip;
+  const total = discountedTotal + tax + tip + deliveryFee;
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   useEffect(() => {
@@ -586,6 +622,7 @@ export default function RestaurantMenu() {
           if (data.enableInventory !== undefined) setEnableInventory(data.enableInventory);
           if (data.comprarButtonEnabled !== undefined) setComprarButtonEnabled(data.comprarButtonEnabled);
           if (data.comprarButtonText !== undefined) setComprarButtonText(data.comprarButtonText);
+          if (data.deliverySettings) setDeliverySettings(data.deliverySettings);
         } else {
           // If restaurant not found, maybe show a 404 or default
           console.warn("Restaurant not found");
@@ -853,7 +890,9 @@ export default function RestaurantMenu() {
   const buildWhatsAppMessage = (
     items: { name: string; quantity: number; price: number; notes?: string }[],
     info: { name: string; address: string; notes: string },
-    grandTotal: number
+    grandTotal: number,
+    deliveryFeeAmount?: number,
+    neighborhoodName?: string
   ) => {
     const lines: string[] = [];
     lines.push(`Olá! Vim pelo ${storeType === "appointment" ? "catálogo" : "menu"} digital do *${restaurantName}* e gostaria de fazer um ${storeType === "appointment" ? "agendamento" : "pedido"}:`);
@@ -880,14 +919,23 @@ export default function RestaurantMenu() {
       lines.push(`Data/Hora: ${displayDate}`);
     } else {
       lines.push(`Endereço: ${info.address || "(retirar no local)"}`);
+      if (neighborhoodName) {
+        lines.push(`Bairro: ${neighborhoodName}`);
+      }
     }
     if (info.notes) lines.push(`Observação: ${info.notes}`);
     lines.push("―――――――――――――");
     
+    if (appliedCoupon || (deliveryFeeAmount !== undefined && deliveryFeeAmount > 0)) {
+      lines.push(`Subtotal dos itens: ${formatCurrency(subtotal)}`);
+    }
     if (appliedCoupon) {
-      lines.push(`Subtotal: ${formatCurrency(subtotal)}`);
       lines.push(`Cupom: ${appliedCoupon.code} (${appliedCoupon.type === "free_shipping" ? "Frete Grátis" : `-${formatCurrency(discountAmount)}`})`);
     }
+    if (deliveryFeeAmount !== undefined && deliveryFeeAmount >= 0 && storeType === "delivery") {
+      lines.push(`Taxa de Entrega: ${deliveryFeeAmount === 0 ? "Grátis" : formatCurrency(deliveryFeeAmount)}`);
+    }
+    
     lines.push(`*TOTAL: ${formatCurrency(grandTotal)}*`);
 
     return lines.join("\n");
@@ -897,9 +945,11 @@ export default function RestaurantMenu() {
     items: { name: string; quantity: number; price: number; notes?: string }[],
     info: { name: string; address: string; notes: string },
     grandTotal: number,
-    transactionItems?: TransactionItem[]
+    transactionItems?: TransactionItem[],
+    deliveryFeeAmount?: number,
+    neighborhoodName?: string
   ) => {
-    const message = buildWhatsAppMessage(items, info, grandTotal);
+    const message = buildWhatsAppMessage(items, info, grandTotal, deliveryFeeAmount, neighborhoodName);
     const phone = whatsappNumber.replace(/\D/g, "");
     if (!phone) {
       setToast("Configure o número do WhatsApp no painel admin");
@@ -1062,7 +1112,8 @@ export default function RestaurantMenu() {
       return itemData;
     });
 
-    sendWhatsApp(items, customer, discountedTotal, transactionItems);
+    const neighborhoodName = deliverySettings.neighborhoods.find(n => n.id === selectedNeighborhoodId)?.name;
+    sendWhatsApp(items, customer, total, transactionItems, deliveryFee, neighborhoodName);
     
     if (tenantId && appliedCoupon) {
       const couponRef = doc(db, "restaurants", tenantId, "coupons", appliedCoupon.id);
@@ -2644,9 +2695,15 @@ export default function RestaurantMenu() {
                     </div>
                   </div>
                 )}
+                {storeType === "delivery" && deliverySettings.enabled && (
+                  <div className="flex justify-between mt-3 pt-3 border-t border-dashed border-zinc-200 text-zinc-600 text-sm">
+                    <span>Taxa de Entrega</span>
+                    <span>{deliveryFee === 0 ? "Grátis" : formatCurrency(deliveryFee)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between mt-3 pt-3 border-t border-zinc-200">
                   <span className="font-semibold">Total</span>
-                  <span className="font-bold text-emerald-700">{formatCurrency(discountedTotal)}</span>
+                  <span className="font-bold text-emerald-700">{formatCurrency(total)}</span>
                 </div>
               </div>
 
@@ -2727,13 +2784,29 @@ export default function RestaurantMenu() {
                     className="w-full border h-11 rounded-xl px-4"
                   />
                 ) : (
-                  <textarea
-                    value={customer.address}
-                    onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                    placeholder="Rua, número, bairro, cidade (deixe em branco para retirar no local)"
-                    rows={2}
-                    className="w-full border rounded-xl p-3 resize-none"
-                  />
+                  <>
+                    {deliverySettings.enabled && deliverySettings.neighborhoods.length > 0 && (
+                      <div className="mb-3">
+                        <select
+                          value={selectedNeighborhoodId}
+                          onChange={(e) => setSelectedNeighborhoodId(e.target.value)}
+                          className="w-full border h-11 rounded-xl px-4 text-sm bg-white"
+                        >
+                          <option value="">Selecione o seu bairro...</option>
+                          {deliverySettings.neighborhoods.map(n => (
+                            <option key={n.id} value={n.id}>{n.name} (+{formatCurrency(n.fee)})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <textarea
+                      value={customer.address}
+                      onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                      placeholder="Rua, número, complemento (deixe em branco para retirar no local)"
+                      rows={2}
+                      className="w-full border rounded-xl p-3 resize-none"
+                    />
+                  </>
                 )}
               </div>
 
@@ -4338,6 +4411,7 @@ export default function RestaurantMenu() {
                     { id: "relatorios", label: "Relatórios", icon: FileText },
                     { id: "alertas", label: `Alertas (${lowStockAlerts.length + outOfStockAlerts.length})`, icon: AlertTriangle, badge: lowStockAlerts.length + outOfStockAlerts.length > 0 },
                     { id: "cupons", label: "Cupons", icon: Tag },
+                    { id: "entregas", label: "Entregas", icon: Truck },
                   ].map(tab => {
                     const Icon = tab.icon;
                     const isActive = gestaoTab === tab.id;
@@ -5263,6 +5337,192 @@ export default function RestaurantMenu() {
                                     </td>
                                     <td className="px-4 py-3 text-emerald-600 font-bold text-xs">
                                       {formatCurrency(t.value)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {gestaoTab === "entregas" && (
+                    <div className="flex-1 p-6 md:p-8 animate-in fade-in duration-300 overflow-y-auto">
+                      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
+                            <Truck className="size-6 text-indigo-600" /> Taxa de Entrega
+                          </h3>
+                          <p className="text-sm text-zinc-500 mt-1">Configure bairros, taxas e frete grátis.</p>
+                        </div>
+                        <div className="flex items-center gap-4 bg-zinc-50 p-2 rounded-xl border border-zinc-100">
+                          <span className="text-sm font-semibold text-zinc-700">Ativar Entregas</span>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={deliverySettings.enabled}
+                              onChange={async (e) => {
+                                const newVal = e.target.checked;
+                                const updated = { ...deliverySettings, enabled: newVal };
+                                setDeliverySettings(updated);
+                                if (tenantId) {
+                                  try {
+                                    await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                    setToast(newVal ? "Entregas ativadas" : "Entregas desativadas");
+                                  } catch (err) { console.error(err); }
+                                }
+                              }}
+                            />
+                            <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm mb-8">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Regras Globais</span>
+                        </div>
+                        <div className="p-4">
+                          <label className="text-[11px] font-medium mb-1 block">Frete Grátis acima de (R$)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={deliverySettings.freeShippingOver || ""}
+                            placeholder="Ex: 50.00"
+                            onBlur={async (e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                              if (val === deliverySettings.freeShippingOver) return;
+                              const updated = { ...deliverySettings, freeShippingOver: val };
+                              setDeliverySettings(updated);
+                              if (tenantId) {
+                                await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                setToast("Regras globais salvas!");
+                              }
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                              setDeliverySettings({ ...deliverySettings, freeShippingOver: val });
+                            }}
+                            className="w-full max-w-[200px] border h-9 rounded-lg px-3 text-xs bg-white"
+                          />
+                          <p className="text-[10px] text-zinc-500 mt-1">Deixe em branco para não usar. O valor é salvo ao clicar fora do campo.</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border rounded-2xl p-6 shadow-sm mb-8">
+                        <h4 className="text-sm font-bold text-zinc-800 mb-4">Adicionar Bairro</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                          <div className="sm:col-span-2">
+                            <label className="text-[11px] font-medium mb-1 block">Nome do Bairro</label>
+                            <input
+                              type="text"
+                              value={newNeighborhoodName}
+                              onChange={(e) => setNewNeighborhoodName(e.target.value)}
+                              placeholder="Ex: Centro"
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white uppercase"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-medium mb-1 block">Taxa (R$)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={newNeighborhoodFee === 0 ? "" : newNeighborhoodFee}
+                              onChange={(e) => setNewNeighborhoodFee(parseFloat(e.target.value) || 0)}
+                              placeholder="Ex: 5.00"
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-medium mb-1 flex items-center gap-1 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={newNeighborhoodFreeShipping} 
+                                onChange={e => setNewNeighborhoodFreeShipping(e.target.checked)}
+                              />
+                              Frete Grátis
+                            </label>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!tenantId) return;
+                                if (!newNeighborhoodName.trim()) { alert("Informe o nome do bairro."); return; }
+                                const nId = "b_" + Date.now();
+                                const newN: DeliveryNeighborhood = {
+                                  id: nId,
+                                  name: newNeighborhoodName.trim().toUpperCase(),
+                                  fee: newNeighborhoodFreeShipping ? 0 : newNeighborhoodFee,
+                                  freeShipping: newNeighborhoodFreeShipping
+                                };
+                                const updated = { ...deliverySettings, neighborhoods: [...deliverySettings.neighborhoods, newN] };
+                                setDeliverySettings(updated);
+                                try {
+                                  await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                  setToast("Bairro adicionado!");
+                                  setNewNeighborhoodName("");
+                                  setNewNeighborhoodFee(0);
+                                  setNewNeighborhoodFreeShipping(false);
+                                } catch (e: any) { console.error(e); }
+                              }}
+                              disabled={!newNeighborhoodName.trim()}
+                              className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
+                            >
+                              <Plus className="size-4" /> Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Bairros Cadastrados ({deliverySettings.neighborhoods.length})</span>
+                        </div>
+                        {deliverySettings.neighborhoods.length === 0 ? (
+                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum bairro cadastrado.</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-zinc-500">
+                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
+                                <tr>
+                                  <th className="px-4 py-3">Bairro</th>
+                                  <th className="px-4 py-3">Taxa</th>
+                                  <th className="px-4 py-3 text-right">Ações</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {deliverySettings.neighborhoods.map((n) => (
+                                  <tr key={n.id} className="hover:bg-zinc-50/50 transition">
+                                    <td className="px-4 py-3.5 font-bold text-zinc-900 uppercase tracking-tight">
+                                      {n.name}
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                      {n.freeShipping || n.fee === 0 ? (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">Frete Grátis</span>
+                                      ) : (
+                                        <span className="font-semibold text-zinc-700">{formatCurrency(n.fee)}</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3.5 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          if (!tenantId || !confirm("Deseja mesmo remover este bairro?")) return;
+                                          const updated = { ...deliverySettings, neighborhoods: deliverySettings.neighborhoods.filter(x => x.id !== n.id) };
+                                          setDeliverySettings(updated);
+                                          try {
+                                            await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                            setToast("Bairro removido");
+                                          } catch (err) { console.error(err); }
+                                        }}
+                                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                      >
+                                        <Trash2 className="size-4" />
+                                      </button>
                                     </td>
                                   </tr>
                                 ))}
