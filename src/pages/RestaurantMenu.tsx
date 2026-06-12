@@ -414,9 +414,11 @@ export default function RestaurantMenu() {
   const [showHeroEditor, setShowHeroEditor] = useState(false);
   const [showPromoEditor, setShowPromoEditor] = useState(false);
   const [showWhatsAppEditor, setShowWhatsAppEditor] = useState(false);
-  const [showReviewsEditor, setShowReviewsEditor] = useState(false);
   const [showFinanceEditor, setShowFinanceEditor] = useState(false);
-  const [gestaoTab, setGestaoTab] = useState<"dashboard" | "estoque" | "financeiro" | "relatorios" | "alertas" | "cupons" | "entregas">("dashboard");
+  const [showCuponsEditor, setShowCuponsEditor] = useState(false);
+  const [showEntregasEditor, setShowEntregasEditor] = useState(false);
+  const [showReviewsEditor, setShowReviewsEditor] = useState(false);
+  const [gestaoTab, setGestaoTab] = useState<"dashboard" | "estoque" | "financeiro" | "relatorios" | "alertas">("dashboard");
   
   // Coupon states
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -1901,14 +1903,6 @@ export default function RestaurantMenu() {
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Subtotal</span>
                     <span className="font-medium">R${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-600">Impostos</span>
-                    <span className="font-medium">R${tax.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-600">Gorjeta (18%)</span>
-                    <span className="font-medium">R${tip.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-base pt-2 border-t border-zinc-200">
                     <span className="font-semibold">Total</span>
@@ -3963,6 +3957,483 @@ export default function RestaurantMenu() {
         return null;
       })()}
 
+      {showCuponsEditor && isAdmin && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-rose-100 rounded-xl grid place-items-center">
+                  <Tag className="size-5 text-rose-700" />
+                </div>
+                <div className="text-xl font-semibold">Cupons de Desconto</div>
+              </div>
+              <button onClick={() => setShowCuponsEditor(false)} className="p-2 hover:bg-zinc-100 rounded-full transition"><X className="size-5 text-zinc-500" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-zinc-50/50 p-6">
+
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-bold text-zinc-900">Gerenciador de Cupons</h3>
+                        <p className="text-xs text-zinc-500">Crie, ative e acompanhe o histórico dos cupons de desconto.</p>
+                      </div>
+
+                      {/* Criar Cupom */}
+                      <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+                        <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Novo Cupom</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                          <div className="sm:col-span-3">
+                            <label className="text-[11px] font-medium mb-1 block">Nome do Cupom</label>
+                            <input
+                              placeholder="Ex: VOLTEI10"
+                              value={newCouponCode}
+                              onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white uppercase font-bold"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="text-[11px] font-medium mb-1 block">Tipo</label>
+                            <select
+                              value={newCouponType}
+                              onChange={(e) => {
+                                setNewCouponType(e.target.value as any);
+                                if (e.target.value === "free_shipping") {
+                                  setNewCouponValue(0);
+                                }
+                              }}
+                              className="w-full border h-9 rounded-lg px-2 text-xs bg-white"
+                            >
+                              <option value="fixed">Fixo (R$)</option>
+                              <option value="percentage">Percentual (%)</option>
+                              <option value="free_shipping">Frete Grátis</option>
+                            </select>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="text-[11px] font-medium mb-1 block">Valor Desconto</label>
+                            <input
+                              type="number"
+                              disabled={newCouponType === "free_shipping"}
+                              placeholder={newCouponType === "percentage" ? "10%" : "R$ 10,00"}
+                              value={newCouponValue || ""}
+                              onChange={(e) => setNewCouponValue(parseFloat(e.target.value) || 0)}
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white disabled:bg-zinc-50 disabled:text-zinc-400"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-3">
+                            <label className="text-[11px] font-medium mb-1 block">Validade (Data Expirar)</label>
+                            <input
+                              type="date"
+                              value={newCouponExpiryDate}
+                              onChange={(e) => setNewCouponExpiryDate(e.target.value)}
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="text-[11px] font-medium mb-1 block">Limite Uso (Qtd)</label>
+                            <input
+                              type="number"
+                              placeholder="Sem limite"
+                              value={newCouponUsageLimit}
+                              onChange={(e) => setNewCouponUsageLimit(e.target.value)}
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!tenantId) return;
+                              const code = newCouponCode.trim().toUpperCase();
+                              if (!code || code.length < 3) {
+                                alert("Código do cupom deve ter pelo menos 3 caracteres.");
+                                return;
+                              }
+                              if (newCouponType !== "free_shipping" && newCouponValue <= 0) {
+                                alert("Por favor, informe um valor de desconto válido.");
+                                return;
+                              }
+                              const newId = "c_" + Date.now();
+                              const newC: Coupon = {
+                                id: newId,
+                                code,
+                                type: newCouponType,
+                                value: newCouponType === "free_shipping" ? 0 : newCouponValue,
+                                expiryDate: newCouponExpiryDate || undefined,
+                                usageLimit: newCouponUsageLimit ? parseInt(newCouponUsageLimit) : undefined,
+                                usedCount: 0,
+                                active: true
+                              };
+                              try {
+                                await setDoc(doc(db, "restaurants", tenantId, "coupons", newId), newC);
+                                setToast("Cupom cadastrado com sucesso!");
+                                setNewCouponCode("");
+                                setNewCouponType("fixed");
+                                setNewCouponValue(0);
+                                setNewCouponExpiryDate("");
+                                setNewCouponUsageLimit("");
+                              } catch (e: any) {
+                                console.error(e);
+                                alert("Erro ao cadastrar cupom: " + e.message);
+                              }
+                            }}
+                            disabled={!newCouponCode}
+                            className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 transition"
+                          >
+                            <Plus className="size-4" /> Cadastrar Cupom
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tabela de Cupons */}
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Cupons Ativos ({coupons.length})</span>
+                        </div>
+                        {coupons.length === 0 ? (
+                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum cupom cadastrado.</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-zinc-500">
+                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
+                                <tr>
+                                  <th className="px-4 py-3">Código</th>
+                                  <th className="px-4 py-3">Desconto</th>
+                                  <th className="px-4 py-3">Uso / Limite</th>
+                                  <th className="px-4 py-3">Validade</th>
+                                  <th className="px-4 py-3 text-right">Ações</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {coupons.map((c) => (
+                                  <tr key={c.id} className="hover:bg-zinc-50/50 transition">
+                                    <td className="px-4 py-3.5 font-bold text-zinc-900 uppercase tracking-tight">
+                                      {c.code}
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                      <span className={cn(
+                                        "px-2 py-0.5 rounded-full text-xs font-semibold",
+                                        c.type === "percentage" ? "bg-indigo-50 text-indigo-700" :
+                                        c.type === "fixed" ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"
+                                      )}>
+                                        {c.type === "percentage" && `${c.value}% OFF`}
+                                        {c.type === "fixed" && `R$ ${c.value.toFixed(2).replace(".", ",")} OFF`}
+                                        {c.type === "free_shipping" && "Frete Grátis"}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3.5 font-medium text-zinc-700 text-xs">
+                                      {c.usedCount} / {c.usageLimit !== undefined && c.usageLimit !== null ? c.usageLimit : "∞"}
+                                    </td>
+                                    <td className="px-4 py-3.5 text-zinc-600 text-xs">
+                                      {c.expiryDate ? formatDate(c.expiryDate) : "Sem data limite"}
+                                    </td>
+                                    <td className="px-4 py-3.5 text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (!tenantId) return;
+                                            try {
+                                              await updateDoc(doc(db, "restaurants", tenantId, "coupons", c.id), {
+                                                active: !c.active
+                                              });
+                                              setToast(c.active ? "Cupom desativado" : "Cupom ativado");
+                                            } catch (err) {
+                                              console.error(err);
+                                            }
+                                          }}
+                                          className={cn(
+                                            "px-2.5 py-1 rounded-lg text-[10px] font-bold transition",
+                                            c.active ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                                          )}
+                                        >
+                                          {c.active ? "Ativo" : "Inativo"}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (!tenantId || !confirm("Deseja mesmo remover este cupom?")) return;
+                                            try {
+                                              await deleteDoc(doc(db, "restaurants", tenantId, "coupons", c.id));
+                                              setToast("Cupom removido");
+                                            } catch (err) {
+                                              console.error(err);
+                                            }
+                                          }}
+                                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                        >
+                                          <Trash2 className="size-4" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Histórico de Utilização */}
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Histórico de Utilização</span>
+                        </div>
+                        {transactions.filter(t => t.couponCode).length === 0 ? (
+                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum cupom utilizado em pedidos ainda.</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-zinc-500">
+                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
+                                <tr>
+                                  <th className="px-4 py-3">Data</th>
+                                  <th className="px-4 py-3">Cliente</th>
+                                  <th className="px-4 py-3">Cupom</th>
+                                  <th className="px-4 py-3">Desconto</th>
+                                  <th className="px-4 py-3">Valor Pedido</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {transactions.filter(t => t.couponCode).map((t) => (
+                                  <tr key={t.id} className="hover:bg-zinc-50/50 transition">
+                                    <td className="px-4 py-3 text-xs text-zinc-500">
+                                      {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                    </td>
+                                    <td className="px-4 py-3 font-semibold text-zinc-900 text-xs">
+                                      {t.description.replace("Pedido: ", "")}
+                                    </td>
+                                    <td className="px-4 py-3 font-bold text-zinc-800 text-xs uppercase font-bold">
+                                      {t.couponCode}
+                                    </td>
+                                    <td className="px-4 py-3 text-rose-600 font-semibold text-xs">
+                                      -{formatCurrency(t.couponDiscount || 0)}
+                                    </td>
+                                    <td className="px-4 py-3 text-emerald-600 font-bold text-xs">
+                                      {formatCurrency(t.value)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {showEntregasEditor && isAdmin && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-sky-100 rounded-xl grid place-items-center">
+                  <Truck className="size-5 text-sky-700" />
+                </div>
+                <div className="text-xl font-semibold">Taxas de Entrega</div>
+              </div>
+              <button onClick={() => setShowEntregasEditor(false)} className="p-2 hover:bg-zinc-100 rounded-full transition"><X className="size-5 text-zinc-500" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-zinc-50/50 p-6">
+
+                    <div className="flex-1 p-6 md:p-8 animate-in fade-in duration-300 overflow-y-auto">
+                      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
+                            <Truck className="size-6 text-indigo-600" /> Taxa de Entrega
+                          </h3>
+                          <p className="text-sm text-zinc-500 mt-1">Configure bairros, taxas e frete grátis.</p>
+                        </div>
+                        <div className="flex items-center gap-4 bg-zinc-50 p-2 rounded-xl border border-zinc-100">
+                          <span className="text-sm font-semibold text-zinc-700">Ativar Entregas</span>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={deliverySettings.enabled}
+                              onChange={async (e) => {
+                                const newVal = e.target.checked;
+                                const updated = { ...deliverySettings, enabled: newVal };
+                                setDeliverySettings(updated);
+                                if (tenantId) {
+                                  try {
+                                    await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                    setToast(newVal ? "Entregas ativadas" : "Entregas desativadas");
+                                  } catch (err) { console.error(err); }
+                                }
+                              }}
+                            />
+                            <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm mb-8">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Regras Globais</span>
+                        </div>
+                        <div className="p-4">
+                          <label className="text-[11px] font-medium mb-1 block">Frete Grátis acima de (R$)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={deliverySettings.freeShippingOver || ""}
+                            placeholder="Ex: 50.00"
+                            onBlur={async (e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                              if (val === deliverySettings.freeShippingOver) return;
+                              const updated = { ...deliverySettings, freeShippingOver: val };
+                              setDeliverySettings(updated);
+                              if (tenantId) {
+                                await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                setToast("Regras globais salvas!");
+                              }
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                              setDeliverySettings({ ...deliverySettings, freeShippingOver: val });
+                            }}
+                            className="w-full max-w-[200px] border h-9 rounded-lg px-3 text-xs bg-white"
+                          />
+                          <p className="text-[10px] text-zinc-500 mt-1">Deixe em branco para não usar. O valor é salvo ao clicar fora do campo.</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border rounded-2xl p-6 shadow-sm mb-8">
+                        <h4 className="text-sm font-bold text-zinc-800 mb-4">Adicionar Bairro</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                          <div className="sm:col-span-2">
+                            <label className="text-[11px] font-medium mb-1 block">Nome do Bairro</label>
+                            <input
+                              type="text"
+                              value={newNeighborhoodName}
+                              onChange={(e) => setNewNeighborhoodName(e.target.value)}
+                              placeholder="Ex: Centro"
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white uppercase"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-medium mb-1 block">Taxa (R$)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={newNeighborhoodFee === 0 ? "" : newNeighborhoodFee}
+                              onChange={(e) => setNewNeighborhoodFee(parseFloat(e.target.value) || 0)}
+                              placeholder="Ex: 5.00"
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-medium mb-1 flex items-center gap-1 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={newNeighborhoodFreeShipping} 
+                                onChange={e => setNewNeighborhoodFreeShipping(e.target.checked)}
+                              />
+                              Frete Grátis
+                            </label>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!tenantId) return;
+                                if (!newNeighborhoodName.trim()) { alert("Informe o nome do bairro."); return; }
+                                const nId = "b_" + Date.now();
+                                const newN: DeliveryNeighborhood = {
+                                  id: nId,
+                                  name: newNeighborhoodName.trim().toUpperCase(),
+                                  fee: newNeighborhoodFreeShipping ? 0 : newNeighborhoodFee,
+                                  freeShipping: newNeighborhoodFreeShipping
+                                };
+                                const updated = { ...deliverySettings, neighborhoods: [...deliverySettings.neighborhoods, newN] };
+                                setDeliverySettings(updated);
+                                try {
+                                  await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                  setToast("Bairro adicionado!");
+                                  setNewNeighborhoodName("");
+                                  setNewNeighborhoodFee(0);
+                                  setNewNeighborhoodFreeShipping(false);
+                                } catch (e: any) { console.error(e); }
+                              }}
+                              disabled={!newNeighborhoodName.trim()}
+                              className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
+                            >
+                              <Plus className="size-4" /> Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Bairros Cadastrados ({deliverySettings.neighborhoods.length})</span>
+                        </div>
+                        {deliverySettings.neighborhoods.length === 0 ? (
+                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum bairro cadastrado.</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-zinc-500">
+                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
+                                <tr>
+                                  <th className="px-4 py-3">Bairro</th>
+                                  <th className="px-4 py-3">Taxa</th>
+                                  <th className="px-4 py-3 text-right">Ações</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {deliverySettings.neighborhoods.map((n) => (
+                                  <tr key={n.id} className="hover:bg-zinc-50/50 transition">
+                                    <td className="px-4 py-3.5 font-bold text-zinc-900 uppercase tracking-tight">
+                                      {n.name}
+                                    </td>
+                                    <td className="px-4 py-3.5">
+                                      {n.freeShipping || n.fee === 0 ? (
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">Frete Grátis</span>
+                                      ) : (
+                                        <span className="font-semibold text-zinc-700">{formatCurrency(n.fee)}</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3.5 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          if (!tenantId || !confirm("Deseja mesmo remover este bairro?")) return;
+                                          const updated = { ...deliverySettings, neighborhoods: deliverySettings.neighborhoods.filter(x => x.id !== n.id) };
+                                          setDeliverySettings(updated);
+                                          try {
+                                            await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
+                                            setToast("Bairro removido");
+                                          } catch (err) { console.error(err); }
+                                        }}
+                                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                      >
+                                        <Trash2 className="size-4" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* FINANCE EDITOR / GESTÃO */}
       {showFinanceEditor && isAdmin && (() => {
         // Helper functions defined locally to ensure clean context access
@@ -4408,8 +4879,6 @@ export default function RestaurantMenu() {
                     { id: "financeiro", label: "Financeiro", icon: DollarSign },
                     { id: "relatorios", label: "Relatórios", icon: FileText },
                     { id: "alertas", label: `Alertas (${lowStockAlerts.length + outOfStockAlerts.length})`, icon: AlertTriangle, badge: lowStockAlerts.length + outOfStockAlerts.length > 0 },
-                    { id: "cupons", label: "Cupons", icon: Tag },
-                    { id: "entregas", label: "Entregas", icon: Truck },
                   ].map(tab => {
                     const Icon = tab.icon;
                     const isActive = gestaoTab === tab.id;
@@ -5091,446 +5560,7 @@ export default function RestaurantMenu() {
                   )}
 
                   {/* 6. CUPONS */}
-                  {gestaoTab === "cupons" && (
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="font-bold text-zinc-900">Gerenciador de Cupons</h3>
-                        <p className="text-xs text-zinc-500">Crie, ative e acompanhe o histórico dos cupons de desconto.</p>
-                      </div>
 
-                      {/* Criar Cupom */}
-                      <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
-                        <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Novo Cupom</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                          <div className="sm:col-span-3">
-                            <label className="text-[11px] font-medium mb-1 block">Nome do Cupom</label>
-                            <input
-                              placeholder="Ex: VOLTEI10"
-                              value={newCouponCode}
-                              onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
-                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white uppercase font-bold"
-                            />
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="text-[11px] font-medium mb-1 block">Tipo</label>
-                            <select
-                              value={newCouponType}
-                              onChange={(e) => {
-                                setNewCouponType(e.target.value as any);
-                                if (e.target.value === "free_shipping") {
-                                  setNewCouponValue(0);
-                                }
-                              }}
-                              className="w-full border h-9 rounded-lg px-2 text-xs bg-white"
-                            >
-                              <option value="fixed">Fixo (R$)</option>
-                              <option value="percentage">Percentual (%)</option>
-                              <option value="free_shipping">Frete Grátis</option>
-                            </select>
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="text-[11px] font-medium mb-1 block">Valor Desconto</label>
-                            <input
-                              type="number"
-                              disabled={newCouponType === "free_shipping"}
-                              placeholder={newCouponType === "percentage" ? "10%" : "R$ 10,00"}
-                              value={newCouponValue || ""}
-                              onChange={(e) => setNewCouponValue(parseFloat(e.target.value) || 0)}
-                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white disabled:bg-zinc-50 disabled:text-zinc-400"
-                            />
-                          </div>
-
-                          <div className="sm:col-span-3">
-                            <label className="text-[11px] font-medium mb-1 block">Validade (Data Expirar)</label>
-                            <input
-                              type="date"
-                              value={newCouponExpiryDate}
-                              onChange={(e) => setNewCouponExpiryDate(e.target.value)}
-                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
-                            />
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="text-[11px] font-medium mb-1 block">Limite Uso (Qtd)</label>
-                            <input
-                              type="number"
-                              placeholder="Sem limite"
-                              value={newCouponUsageLimit}
-                              onChange={(e) => setNewCouponUsageLimit(e.target.value)}
-                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end pt-1">
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!tenantId) return;
-                              const code = newCouponCode.trim().toUpperCase();
-                              if (!code || code.length < 3) {
-                                alert("Código do cupom deve ter pelo menos 3 caracteres.");
-                                return;
-                              }
-                              if (newCouponType !== "free_shipping" && newCouponValue <= 0) {
-                                alert("Por favor, informe um valor de desconto válido.");
-                                return;
-                              }
-                              const newId = "c_" + Date.now();
-                              const newC: Coupon = {
-                                id: newId,
-                                code,
-                                type: newCouponType,
-                                value: newCouponType === "free_shipping" ? 0 : newCouponValue,
-                                expiryDate: newCouponExpiryDate || undefined,
-                                usageLimit: newCouponUsageLimit ? parseInt(newCouponUsageLimit) : undefined,
-                                usedCount: 0,
-                                active: true
-                              };
-                              try {
-                                await setDoc(doc(db, "restaurants", tenantId, "coupons", newId), newC);
-                                setToast("Cupom cadastrado com sucesso!");
-                                setNewCouponCode("");
-                                setNewCouponType("fixed");
-                                setNewCouponValue(0);
-                                setNewCouponExpiryDate("");
-                                setNewCouponUsageLimit("");
-                              } catch (e: any) {
-                                console.error(e);
-                                alert("Erro ao cadastrar cupom: " + e.message);
-                              }
-                            }}
-                            disabled={!newCouponCode}
-                            className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 transition"
-                          >
-                            <Plus className="size-4" /> Cadastrar Cupom
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Tabela de Cupons */}
-                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
-                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
-                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Cupons Ativos ({coupons.length})</span>
-                        </div>
-                        {coupons.length === 0 ? (
-                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum cupom cadastrado.</div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left text-zinc-500">
-                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
-                                <tr>
-                                  <th className="px-4 py-3">Código</th>
-                                  <th className="px-4 py-3">Desconto</th>
-                                  <th className="px-4 py-3">Uso / Limite</th>
-                                  <th className="px-4 py-3">Validade</th>
-                                  <th className="px-4 py-3 text-right">Ações</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y">
-                                {coupons.map((c) => (
-                                  <tr key={c.id} className="hover:bg-zinc-50/50 transition">
-                                    <td className="px-4 py-3.5 font-bold text-zinc-900 uppercase tracking-tight">
-                                      {c.code}
-                                    </td>
-                                    <td className="px-4 py-3.5">
-                                      <span className={cn(
-                                        "px-2 py-0.5 rounded-full text-xs font-semibold",
-                                        c.type === "percentage" ? "bg-indigo-50 text-indigo-700" :
-                                        c.type === "fixed" ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"
-                                      )}>
-                                        {c.type === "percentage" && `${c.value}% OFF`}
-                                        {c.type === "fixed" && `R$ ${c.value.toFixed(2).replace(".", ",")} OFF`}
-                                        {c.type === "free_shipping" && "Frete Grátis"}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3.5 font-medium text-zinc-700 text-xs">
-                                      {c.usedCount} / {c.usageLimit !== undefined && c.usageLimit !== null ? c.usageLimit : "∞"}
-                                    </td>
-                                    <td className="px-4 py-3.5 text-zinc-600 text-xs">
-                                      {c.expiryDate ? formatDate(c.expiryDate) : "Sem data limite"}
-                                    </td>
-                                    <td className="px-4 py-3.5 text-right">
-                                      <div className="flex items-center justify-end gap-2">
-                                        <button
-                                          type="button"
-                                          onClick={async () => {
-                                            if (!tenantId) return;
-                                            try {
-                                              await updateDoc(doc(db, "restaurants", tenantId, "coupons", c.id), {
-                                                active: !c.active
-                                              });
-                                              setToast(c.active ? "Cupom desativado" : "Cupom ativado");
-                                            } catch (err) {
-                                              console.error(err);
-                                            }
-                                          }}
-                                          className={cn(
-                                            "px-2.5 py-1 rounded-lg text-[10px] font-bold transition",
-                                            c.active ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                                          )}
-                                        >
-                                          {c.active ? "Ativo" : "Inativo"}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={async () => {
-                                            if (!tenantId || !confirm("Deseja mesmo remover este cupom?")) return;
-                                            try {
-                                              await deleteDoc(doc(db, "restaurants", tenantId, "coupons", c.id));
-                                              setToast("Cupom removido");
-                                            } catch (err) {
-                                              console.error(err);
-                                            }
-                                          }}
-                                          className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
-                                        >
-                                          <Trash2 className="size-4" />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Histórico de Utilização */}
-                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
-                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
-                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Histórico de Utilização</span>
-                        </div>
-                        {transactions.filter(t => t.couponCode).length === 0 ? (
-                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum cupom utilizado em pedidos ainda.</div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left text-zinc-500">
-                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
-                                <tr>
-                                  <th className="px-4 py-3">Data</th>
-                                  <th className="px-4 py-3">Cliente</th>
-                                  <th className="px-4 py-3">Cupom</th>
-                                  <th className="px-4 py-3">Desconto</th>
-                                  <th className="px-4 py-3">Valor Pedido</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y">
-                                {transactions.filter(t => t.couponCode).map((t) => (
-                                  <tr key={t.id} className="hover:bg-zinc-50/50 transition">
-                                    <td className="px-4 py-3 text-xs text-zinc-500">
-                                      {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                    </td>
-                                    <td className="px-4 py-3 font-semibold text-zinc-900 text-xs">
-                                      {t.description.replace("Pedido: ", "")}
-                                    </td>
-                                    <td className="px-4 py-3 font-bold text-zinc-800 text-xs uppercase font-bold">
-                                      {t.couponCode}
-                                    </td>
-                                    <td className="px-4 py-3 text-rose-600 font-semibold text-xs">
-                                      -{formatCurrency(t.couponDiscount || 0)}
-                                    </td>
-                                    <td className="px-4 py-3 text-emerald-600 font-bold text-xs">
-                                      {formatCurrency(t.value)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {gestaoTab === "entregas" && (
-                    <div className="flex-1 p-6 md:p-8 animate-in fade-in duration-300 overflow-y-auto">
-                      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
-                            <Truck className="size-6 text-indigo-600" /> Taxa de Entrega
-                          </h3>
-                          <p className="text-sm text-zinc-500 mt-1">Configure bairros, taxas e frete grátis.</p>
-                        </div>
-                        <div className="flex items-center gap-4 bg-zinc-50 p-2 rounded-xl border border-zinc-100">
-                          <span className="text-sm font-semibold text-zinc-700">Ativar Entregas</span>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              checked={deliverySettings.enabled}
-                              onChange={async (e) => {
-                                const newVal = e.target.checked;
-                                const updated = { ...deliverySettings, enabled: newVal };
-                                setDeliverySettings(updated);
-                                if (tenantId) {
-                                  try {
-                                    await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
-                                    setToast(newVal ? "Entregas ativadas" : "Entregas desativadas");
-                                  } catch (err) { console.error(err); }
-                                }
-                              }}
-                            />
-                            <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm mb-8">
-                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
-                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Regras Globais</span>
-                        </div>
-                        <div className="p-4">
-                          <label className="text-[11px] font-medium mb-1 block">Frete Grátis acima de (R$)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={deliverySettings.freeShippingOver || ""}
-                            placeholder="Ex: 50.00"
-                            onBlur={async (e) => {
-                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
-                              if (val === deliverySettings.freeShippingOver) return;
-                              const updated = { ...deliverySettings, freeShippingOver: val };
-                              setDeliverySettings(updated);
-                              if (tenantId) {
-                                await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
-                                setToast("Regras globais salvas!");
-                              }
-                            }}
-                            onChange={(e) => {
-                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
-                              setDeliverySettings({ ...deliverySettings, freeShippingOver: val });
-                            }}
-                            className="w-full max-w-[200px] border h-9 rounded-lg px-3 text-xs bg-white"
-                          />
-                          <p className="text-[10px] text-zinc-500 mt-1">Deixe em branco para não usar. O valor é salvo ao clicar fora do campo.</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border rounded-2xl p-6 shadow-sm mb-8">
-                        <h4 className="text-sm font-bold text-zinc-800 mb-4">Adicionar Bairro</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                          <div className="sm:col-span-2">
-                            <label className="text-[11px] font-medium mb-1 block">Nome do Bairro</label>
-                            <input
-                              type="text"
-                              value={newNeighborhoodName}
-                              onChange={(e) => setNewNeighborhoodName(e.target.value)}
-                              placeholder="Ex: Centro"
-                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white uppercase"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-medium mb-1 block">Taxa (R$)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={newNeighborhoodFee === 0 ? "" : newNeighborhoodFee}
-                              onChange={(e) => setNewNeighborhoodFee(parseFloat(e.target.value) || 0)}
-                              placeholder="Ex: 5.00"
-                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-medium mb-1 flex items-center gap-1 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                checked={newNeighborhoodFreeShipping} 
-                                onChange={e => setNewNeighborhoodFreeShipping(e.target.checked)}
-                              />
-                              Frete Grátis
-                            </label>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                if (!tenantId) return;
-                                if (!newNeighborhoodName.trim()) { alert("Informe o nome do bairro."); return; }
-                                const nId = "b_" + Date.now();
-                                const newN: DeliveryNeighborhood = {
-                                  id: nId,
-                                  name: newNeighborhoodName.trim().toUpperCase(),
-                                  fee: newNeighborhoodFreeShipping ? 0 : newNeighborhoodFee,
-                                  freeShipping: newNeighborhoodFreeShipping
-                                };
-                                const updated = { ...deliverySettings, neighborhoods: [...deliverySettings.neighborhoods, newN] };
-                                setDeliverySettings(updated);
-                                try {
-                                  await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
-                                  setToast("Bairro adicionado!");
-                                  setNewNeighborhoodName("");
-                                  setNewNeighborhoodFee(0);
-                                  setNewNeighborhoodFreeShipping(false);
-                                } catch (e: any) { console.error(e); }
-                              }}
-                              disabled={!newNeighborhoodName.trim()}
-                              className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 transition"
-                            >
-                              <Plus className="size-4" /> Adicionar
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
-                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
-                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Bairros Cadastrados ({deliverySettings.neighborhoods.length})</span>
-                        </div>
-                        {deliverySettings.neighborhoods.length === 0 ? (
-                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum bairro cadastrado.</div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left text-zinc-500">
-                              <thead className="text-[10px] font-bold text-zinc-700 uppercase tracking-wider bg-zinc-50">
-                                <tr>
-                                  <th className="px-4 py-3">Bairro</th>
-                                  <th className="px-4 py-3">Taxa</th>
-                                  <th className="px-4 py-3 text-right">Ações</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y">
-                                {deliverySettings.neighborhoods.map((n) => (
-                                  <tr key={n.id} className="hover:bg-zinc-50/50 transition">
-                                    <td className="px-4 py-3.5 font-bold text-zinc-900 uppercase tracking-tight">
-                                      {n.name}
-                                    </td>
-                                    <td className="px-4 py-3.5">
-                                      {n.freeShipping || n.fee === 0 ? (
-                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">Frete Grátis</span>
-                                      ) : (
-                                        <span className="font-semibold text-zinc-700">{formatCurrency(n.fee)}</span>
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3.5 text-right">
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          if (!tenantId || !confirm("Deseja mesmo remover este bairro?")) return;
-                                          const updated = { ...deliverySettings, neighborhoods: deliverySettings.neighborhoods.filter(x => x.id !== n.id) };
-                                          setDeliverySettings(updated);
-                                          try {
-                                            await setDoc(doc(db, "restaurants", tenantId), { deliverySettings: updated }, { merge: true });
-                                            setToast("Bairro removido");
-                                          } catch (err) { console.error(err); }
-                                        }}
-                                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
-                                      >
-                                        <Trash2 className="size-4" />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
