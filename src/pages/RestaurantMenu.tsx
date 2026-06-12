@@ -29,7 +29,7 @@ import {
   Star,
   MessageCircle,
   Tag,
-  Phone,
+  
   Palette,
   Settings,
   Calendar,
@@ -2264,6 +2264,23 @@ export default function RestaurantMenu() {
               </div>
 
               <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
+                <label className="text-sm font-semibold text-zinc-700 font-medium flex items-center gap-2">
+                  <Tag className="size-4 text-rose-500" /> Aviso / Banner no Topo
+                </label>
+                <p className="text-xs text-zinc-500">Adicione um banner de aviso ou promoção no topo do seu cardápio.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWhatsAppEditor(false);
+                    setShowPromoEditor(true);
+                  }}
+                  className="w-full h-10 rounded-xl bg-white border border-zinc-200 font-medium text-sm hover:bg-zinc-50 transition"
+                >
+                  Editar Banner de Aviso
+                </button>
+              </div>
+
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -2859,12 +2876,12 @@ export default function RestaurantMenu() {
                 </button>
                 <button
                   onClick={() => {
-                    setShowPromoEditor(true);
+                    setShowCuponsEditor(true);
                     setShowAdminPanel(false);
                   }}
                   className="flex items-center gap-2 px-3 h-10 bg-rose-600 text-white rounded-2xl text-sm font-medium"
                 >
-                  <Tag className="size-4" /> Promoção
+                  <Tag className="size-4" /> Cupons
                 </button>
                 <button
                   onClick={() => {
@@ -2873,7 +2890,16 @@ export default function RestaurantMenu() {
                   }}
                   className="flex items-center gap-2 px-3 h-10 bg-emerald-700 text-white rounded-2xl text-sm font-medium"
                 >
-                  <Phone className="size-4" /> WhatsApp
+                  <Settings className="size-4" /> Configurações
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEntregasEditor(true);
+                    setShowAdminPanel(false);
+                  }}
+                  className="flex items-center gap-2 px-3 h-10 bg-sky-600 text-white rounded-2xl text-sm font-medium"
+                >
+                  <Truck className="size-4" /> Entregas
                 </button>
                 <button
                   onClick={() => {
