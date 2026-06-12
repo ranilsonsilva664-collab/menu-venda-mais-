@@ -14,9 +14,7 @@ import {
   Minus,
   X,
   ShoppingBag,
-  Sparkles,
   Clock,
-  ChefHat,
   Heart,
   Check,
   ChevronRight,
@@ -39,6 +37,11 @@ import {
   DollarSign,
   ArrowUpCircle,
   ArrowDownCircle,
+  BarChart3,
+  Package,
+  FileText,
+  AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -57,6 +60,9 @@ export type MenuItem = {
   prepTime?: string;
   popular?: boolean;
   chefPick?: boolean;
+  stockQuantity?: number;
+  costPrice?: number;
+  minStockLimit?: number;
 };
 
 type CartItem = {
@@ -70,12 +76,22 @@ type CartItem = {
   options?: string[];
 };
 
+export type TransactionItem = {
+  menuId: string;
+  name: string;
+  category: string;
+  quantity: number;
+  price: number;
+  costPrice?: number;
+};
+
 export type Transaction = {
   id: string;
   type: "entry" | "exit";
   description: string;
   value: number;
   date: string;
+  items?: TransactionItem[];
 };
 
 const dietaryMeta: Record<Dietary, { label: string; icon: React.ComponentType<any>; color: string }> = {
@@ -364,11 +380,16 @@ export default function RestaurantMenu() {
   const [showWhatsAppEditor, setShowWhatsAppEditor] = useState(false);
   const [showReviewsEditor, setShowReviewsEditor] = useState(false);
   const [showFinanceEditor, setShowFinanceEditor] = useState(false);
+  const [gestaoTab, setGestaoTab] = useState<"dashboard" | "estoque" | "financeiro" | "relatorios" | "alertas">("dashboard");
+  const [financePeriod, setFinancePeriod] = useState<"hoje" | "semana" | "mes" | "ano">("mes");
+  const [chartPeriod, setChartPeriod] = useState<"dia" | "semana" | "mes">("dia");
+  const [relatorioPeriod, setRelatorioPeriod] = useState<"diario" | "semanal" | "mensal">("diario");
+  const [stockSearch, setStockSearch] = useState("");
 
   // Finance states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({ type: "entry" });
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  // const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   // Checkout (WhatsApp)
   const [showCheckout, setShowCheckout] = useState(false);
@@ -384,6 +405,7 @@ export default function RestaurantMenu() {
   const [storeType, setStoreType] = useState<"delivery" | "appointment">("delivery");
   const [locationAddress, setLocationAddress] = useState("");
   const [showLocationMap, setShowLocationMap] = useState(false);
+  const [enableInventory, setEnableInventory] = useState(false);
 
   // Theme configuration
   const [themeColor, setThemeColor] = useState("#f59e0b");
@@ -393,7 +415,7 @@ export default function RestaurantMenu() {
   const [themeTextColor, setThemeTextColor] = useState("#18181b");
 
   // Music configuration
-  const hasAttemptedAutoplay = useRef(false);
+  // const hasAttemptedAutoplay = useRef(false);
 
   // Promo banner state
   const [promoBanner, setPromoBanner] = useState({
@@ -511,6 +533,7 @@ export default function RestaurantMenu() {
           if (data.storeType) setStoreType(data.storeType);
           if (data.locationAddress) setLocationAddress(data.locationAddress);
           if (data.showLocationMap !== undefined) setShowLocationMap(data.showLocationMap);
+          if (data.enableInventory !== undefined) setEnableInventory(data.enableInventory);
         } else {
           // If restaurant not found, maybe show a 404 or default
           console.warn("Restaurant not found");
@@ -750,7 +773,8 @@ export default function RestaurantMenu() {
   const sendWhatsApp = (
     items: { name: string; quantity: number; price: number; notes?: string }[],
     info: { name: string; address: string; notes: string },
-    grandTotal: number
+    grandTotal: number,
+    transactionItems?: TransactionItem[]
   ) => {
     const message = buildWhatsAppMessage(items, info, grandTotal);
     const phone = whatsappNumber.replace(/\D/g, "");
@@ -769,6 +793,9 @@ export default function RestaurantMenu() {
           value: grandTotal,
           date: new Date().toISOString()
         };
+        if (transactionItems) {
+          t.items = transactionItems;
+        }
         const docRef = doc(db, "restaurants", tenantId, "transactions", tId);
         
         // Execute background write without awaiting so browser doesn't block window.open
@@ -824,13 +851,51 @@ export default function RestaurantMenu() {
     setShowCart(false);
   };
 
+  const deductStock = async (cartItems: CartItem[]) => {
+    if (!tenantId) return;
+    setMenu((prevMenu) => {
+      return prevMenu.map((item) => {
+        const cartItem = cartItems.find((c) => c.menuId === item.id || c.name === item.name);
+        if (cartItem) {
+          const currentStock = item.stockQuantity !== undefined ? item.stockQuantity : 0;
+          const newStock = Math.max(0, currentStock - cartItem.quantity);
+          
+          updateDoc(doc(db, "restaurants", tenantId, "menu", item.id), {
+            stockQuantity: newStock
+          }).catch((err) => console.error("Erro ao decrementar estoque no banco:", err));
+          
+          return { ...item, stockQuantity: newStock };
+        }
+        return item;
+      });
+    });
+  };
+
   const submitCheckout = () => {
     if (!customer.name.trim()) {
       setToast("Por favor, informe seu nome");
       return;
     }
     const items = cart.map((c) => ({ name: c.name, quantity: c.quantity, price: c.price, notes: c.notes }));
-    sendWhatsApp(items, customer, subtotal);
+    
+    const transactionItems: TransactionItem[] = cart.map((c) => {
+      const menuItem = menu.find((m) => m.id === c.menuId || m.name === c.name);
+      return {
+        menuId: c.menuId || "custom",
+        name: c.name,
+        category: menuItem?.category || "Outros",
+        quantity: c.quantity,
+        price: c.price,
+        costPrice: menuItem?.costPrice
+      };
+    });
+
+    sendWhatsApp(items, customer, subtotal, transactionItems);
+    
+    if (enableInventory) {
+      deductStock(cart);
+    }
+
     setShowCheckout(false);
     setCart([]);
     setCustomer({ name: "", address: "", notes: "" });
@@ -909,6 +974,9 @@ export default function RestaurantMenu() {
     };
     if (newItem.calories) item.calories = newItem.calories;
     if (newItem.prepTime) item.prepTime = newItem.prepTime;
+    if (newItem.stockQuantity !== undefined) item.stockQuantity = newItem.stockQuantity;
+    if (newItem.costPrice !== undefined) item.costPrice = newItem.costPrice;
+    if (newItem.minStockLimit !== undefined) item.minStockLimit = newItem.minStockLimit;
 
     setMenu((prev) => [...prev, item]);
     try {
@@ -1302,23 +1370,35 @@ export default function RestaurantMenu() {
                     <h2 className="display text-[32px]">{cat}</h2>
                   </div>
                   <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {items.map((item) => (
-                      <article
-                        key={item.id}
-                        className="group relative bg-white rounded-[1.5rem] border border-zinc-200 overflow-hidden hover:shadow-xl hover:shadow-zinc-200/60 hover:-translate-y-0.5 transition-all duration-300"
-                      >
-                        <button
-                          onClick={() => setSelectedItem(item)}
-                          className="absolute inset-0 z-10"
-                          aria-label={`Ver ${item.name}`}
-                        />
-                        <div className="relative aspect-[4/3] overflow-hidden">
-                          <img
-                            src={item.images[0] || PLACEHOLDER}
-                            alt={item.name}
-                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                            loading="lazy"
+                    {items.map((item) => {
+                      const isEsgotado = enableInventory && item.stockQuantity !== undefined && item.stockQuantity <= 0;
+                      return (
+                        <article
+                          key={item.id}
+                          className={cn(
+                            "group relative bg-white rounded-[1.5rem] border border-zinc-200 overflow-hidden hover:shadow-xl hover:shadow-zinc-200/60 hover:-translate-y-0.5 transition-all duration-300",
+                            isEsgotado && "opacity-80"
+                          )}
+                        >
+                          <button
+                            onClick={() => setSelectedItem(item)}
+                            className="absolute inset-0 z-10"
+                            aria-label={`Ver ${item.name}`}
                           />
+                          <div className="relative aspect-[4/3] overflow-hidden">
+                            <img
+                              src={item.images[0] || PLACEHOLDER}
+                              alt={item.name}
+                              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                              loading="lazy"
+                            />
+                            {isEsgotado && (
+                              <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center z-20">
+                                <span className="bg-red-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg border border-red-500">
+                                  Produto Esgotado
+                                </span>
+                              </div>
+                            )}
                           {item.images.length > 1 && (
                             <div className="absolute bottom-12 right-3 bg-black/60 backdrop-blur text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                               <ImagePlus className="size-3" />
@@ -1371,14 +1451,24 @@ export default function RestaurantMenu() {
                           <div className="flex items-start justify-between gap-3">
                             <h3 className="font-semibold leading-snug text-[17px]">{item.name}</h3>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToCart(item);
-                              }}
-                              className="relative z-20 size-8 grid place-items-center rounded-full bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 transition"
-                            >
-                              <Plus className="size-4" />
-                            </button>
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 if (isEsgotado) {
+                                   setToast("Produto indisponível no estoque");
+                                   return;
+                                 }
+                                 addToCart(item);
+                               }}
+                               disabled={isEsgotado}
+                               className={cn(
+                                 "relative z-20 size-8 grid place-items-center rounded-full transition",
+                                 isEsgotado 
+                                   ? "bg-zinc-200 text-zinc-400 cursor-not-allowed" 
+                                   : "bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95"
+                               )}
+                             >
+                               {isEsgotado ? <Lock className="size-3.5" /> : <Plus className="size-4" />}
+                             </button>
                           </div>
                           <p className="mt-1 text-sm text-zinc-600 line-clamp-2 leading-relaxed subtitle-font">
                             {item.description}
@@ -1396,12 +1486,13 @@ export default function RestaurantMenu() {
                           )}
                         </div>
                       </article>
-                    ))}
+                    );
+                  })}
                   </div>
                 </section>
               ))}
-            </div>
-          )}
+              </div>
+            )}
 
 
         {/* Location Map */}
@@ -2364,7 +2455,7 @@ export default function RestaurantMenu() {
                   }}
                   className="flex items-center gap-2 px-3 h-10 bg-indigo-600 text-white rounded-2xl text-sm font-medium"
                 >
-                  <DollarSign className="size-4" /> Financeiro
+                  <SlidersHorizontal className="size-4" /> Gestão
                 </button>
                 <button
                   onClick={logoutAdmin}
@@ -2497,6 +2588,70 @@ export default function RestaurantMenu() {
                   />
                 </div>
               </div>
+
+              {enableInventory && (
+                <div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-200 space-y-4">
+                  <div className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="size-4 text-indigo-600" /> Controle de Estoque e Custos (Opcional)
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-zinc-600">Qtd em Estoque</label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 50"
+                        value={editingItem.stockQuantity !== undefined ? editingItem.stockQuantity : ""}
+                        onChange={(e) => setEditingItem({ ...editingItem, stockQuantity: e.target.value === "" ? undefined : parseInt(e.target.value) || 0 })}
+                        className="w-full border h-10 rounded-xl px-3 mt-1 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-600">Custo do Produto (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ex: 10.00"
+                        value={editingItem.costPrice !== undefined ? editingItem.costPrice : ""}
+                        onChange={(e) => setEditingItem({ ...editingItem, costPrice: e.target.value === "" ? undefined : parseFloat(e.target.value) || 0 })}
+                        className="w-full border h-10 rounded-xl px-3 mt-1 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-600">Alerta Mínimo</label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 5"
+                        value={editingItem.minStockLimit !== undefined ? editingItem.minStockLimit : ""}
+                        onChange={(e) => setEditingItem({ ...editingItem, minStockLimit: e.target.value === "" ? undefined : parseInt(e.target.value) || 0 })}
+                        className="w-full border h-10 rounded-xl px-3 mt-1 bg-white text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2 bg-white p-3 rounded-xl border text-[11px] sm:text-xs">
+                    <div>
+                      <span className="text-zinc-500 block">Lucro p/ Unidade:</span>
+                      <span className="font-semibold text-emerald-600">
+                        R${(editingItem.price - (editingItem.costPrice || 0)).toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block">Margem de Lucro:</span>
+                      <span className="font-semibold text-indigo-600">
+                        {editingItem.price > 0 
+                          ? `${(((editingItem.price - (editingItem.costPrice || 0)) / editingItem.price) * 100).toFixed(1)}%` 
+                          : "0.0%"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block">Lucro Potencial:</span>
+                      <span className="font-semibold text-amber-600">
+                        R${((editingItem.price - (editingItem.costPrice || 0)) * (editingItem.stockQuantity || 0)).toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Restrições Alimentares</label>
@@ -2649,6 +2804,70 @@ export default function RestaurantMenu() {
                   className="border h-11 rounded-xl px-4"
                 />
               </div>
+
+              {enableInventory && (
+                <div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-200 space-y-4">
+                  <div className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="size-4 text-indigo-600" /> Controle de Estoque e Custos (Opcional)
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-zinc-600">Qtd em Estoque</label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 50"
+                        value={newItem.stockQuantity !== undefined ? newItem.stockQuantity : ""}
+                        onChange={(e) => setNewItem({ ...newItem, stockQuantity: e.target.value === "" ? undefined : parseInt(e.target.value) || 0 })}
+                        className="w-full border h-10 rounded-xl px-3 mt-1 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-600">Custo do Produto (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ex: 10.00"
+                        value={newItem.costPrice !== undefined ? newItem.costPrice : ""}
+                        onChange={(e) => setNewItem({ ...newItem, costPrice: e.target.value === "" ? undefined : parseFloat(e.target.value) || 0 })}
+                        className="w-full border h-10 rounded-xl px-3 mt-1 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-zinc-600">Alerta Mínimo</label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 5"
+                        value={newItem.minStockLimit !== undefined ? newItem.minStockLimit : ""}
+                        onChange={(e) => setNewItem({ ...newItem, minStockLimit: e.target.value === "" ? undefined : parseInt(e.target.value) || 0 })}
+                        className="w-full border h-10 rounded-xl px-3 mt-1 bg-white text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2 bg-white p-3 rounded-xl border text-[11px] sm:text-xs">
+                    <div>
+                      <span className="text-zinc-500 block">Lucro p/ Unidade:</span>
+                      <span className="font-semibold text-emerald-600">
+                        R${((newItem.price || 0) - (newItem.costPrice || 0)).toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block">Margem de Lucro:</span>
+                      <span className="font-semibold text-indigo-600">
+                        {(newItem.price || 0) > 0 
+                          ? `${((((newItem.price || 0) - (newItem.costPrice || 0)) / (newItem.price || 0)) * 100).toFixed(1)}%` 
+                          : "0.0%"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 block">Lucro Potencial:</span>
+                      <span className="font-semibold text-amber-600">
+                        R${(((newItem.price || 0) - (newItem.costPrice || 0)) * (newItem.stockQuantity || 0)).toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <div className="text-sm mb-2">Restrições</div>
@@ -2875,21 +3094,50 @@ export default function RestaurantMenu() {
             <div className="p-6">
               <h2 className="text-3xl font-semibold mb-1">{selectedItem.name}</h2>
               <p className="text-zinc-600">{selectedItem.description}</p>
+
+              {enableInventory && selectedItem.stockQuantity !== undefined && (
+                <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
+                  <span className={cn(
+                    "size-2 rounded-full",
+                    selectedItem.stockQuantity <= 0 
+                      ? "bg-red-500" 
+                      : selectedItem.stockQuantity <= (selectedItem.minStockLimit || 0) 
+                        ? "bg-amber-500" 
+                        : "bg-emerald-500"
+                  )} />
+                  {selectedItem.stockQuantity <= 0 
+                    ? "Produto Esgotado" 
+                    : selectedItem.stockQuantity <= (selectedItem.minStockLimit || 0) 
+                      ? "Estoque Baixo" 
+                      : "Disponível em Estoque"}
+                  <span className="text-zinc-400">({selectedItem.stockQuantity} un.)</span>
+                </div>
+              )}
+
               <div className="my-4 text-2xl font-bold">R${selectedItem.price}</div>
               <textarea
                 id="notes"
-                placeholder="Observações para a cozinha"
+                disabled={enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0}
+                placeholder={enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0 ? "Produto indisponível" : "Observações para a cozinha"}
                 className="w-full border rounded-2xl p-4 h-16 text-sm"
               />
               <button
+                disabled={enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0}
                 onClick={() => {
                   const notes = (document.getElementById("notes") as HTMLTextAreaElement)?.value;
                   addToCart(selectedItem, { notes });
                   setSelectedItem(null);
                 }}
-                className="mt-4 w-full h-12 rounded-2xl bg-zinc-900 text-white font-semibold"
+                className={cn(
+                  "mt-4 w-full h-12 rounded-2xl text-white font-semibold transition",
+                  enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0
+                    ? "bg-zinc-200 text-zinc-400 cursor-not-allowed"
+                    : "bg-zinc-900 hover:bg-zinc-800"
+                )}
               >
-                {storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"}
+                {enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0 
+                  ? "Produto Esgotado" 
+                  : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido")}
               </button>
             </div>
           </div>
@@ -2909,161 +3157,1142 @@ export default function RestaurantMenu() {
         </a>
       )}
 
-      {/* FINANCE EDITOR */}
-      {showFinanceEditor && isAdmin && (
-        <div className="fixed inset-0 z-[180] bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="size-10 bg-indigo-100 rounded-xl grid place-items-center">
-                  <DollarSign className="size-5 text-indigo-700" />
-                </div>
-                <div className="text-xl font-semibold">Gestão Financeira</div>
-              </div>
-              <button onClick={() => setShowFinanceEditor(false)}><X /></button>
-            </div>
-            
-            <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-zinc-50/50">
-              {/* Dashboard */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                <div className="bg-white p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
-                  <span className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Entradas</span>
-                  <div className="text-sm sm:text-xl font-bold text-emerald-600 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <ArrowUpCircle className="size-4 sm:size-5 shrink-0" />
-                    <span>{formatCurrency(transactions.filter(t => t.type === "entry").reduce((a, b) => a + b.value, 0))}</span>
+      {/* Gestão Helpers */}
+      {(() => {
+        // We define helper functions inside a closure so they are accessible and neatly grouped
+        return null;
+      })()}
+
+      {/* FINANCE EDITOR / GESTÃO */}
+      {showFinanceEditor && isAdmin && (() => {
+        // Helper functions defined locally to ensure clean context access
+        const toggleInventoryControl = async () => {
+          const newSetting = !enableInventory;
+          setEnableInventory(newSetting);
+          if (tenantId) {
+            try {
+              await setDoc(doc(db, "restaurants", tenantId), { enableInventory: newSetting }, { merge: true });
+              setToast(newSetting ? "Controle de estoque ativado!" : "Controle de estoque desativado.");
+            } catch (err) {
+              console.error(err);
+              setToast("Erro ao salvar configuração.");
+            }
+          }
+        };
+
+        const handleQuickStockUpdate = async (item: MenuItem, newStock: number) => {
+          const stock = Math.max(0, newStock);
+          setMenu(prev => prev.map(m => m.id === item.id ? { ...m, stockQuantity: stock } : m));
+          if (tenantId) {
+            try {
+              await updateDoc(doc(db, "restaurants", tenantId, "menu", item.id), { stockQuantity: stock });
+            } catch (err) {
+              console.error(err);
+            }
+          }
+        };
+
+        const handleQuickCostUpdate = async (item: MenuItem, newCost: number) => {
+          const cost = Math.max(0, newCost);
+          setMenu(prev => prev.map(m => m.id === item.id ? { ...m, costPrice: cost } : m));
+          if (tenantId) {
+            try {
+              await updateDoc(doc(db, "restaurants", tenantId, "menu", item.id), { costPrice: cost });
+            } catch (err) {
+              console.error(err);
+            }
+          }
+        };
+
+        const handleQuickMinLimitUpdate = async (item: MenuItem, newLimit: number) => {
+          const limit = Math.max(0, newLimit);
+          setMenu(prev => prev.map(m => m.id === item.id ? { ...m, minStockLimit: limit } : m));
+          if (tenantId) {
+            try {
+              await updateDoc(doc(db, "restaurants", tenantId, "menu", item.id), { minStockLimit: limit });
+            } catch (err) {
+              console.error(err);
+            }
+          }
+        };
+
+        const exportToCSV = (periodLabel: string, itemsList: any[]) => {
+          try {
+            let csvContent = "\uFEFF"; // UTF-8 BOM
+            csvContent += "Produto,Quantidade Vendida,Receita Total (R$),Categoria\n";
+            itemsList.forEach(row => {
+              csvContent += `"${row.name.replace(/"/g, '""')}",${row.qty},"${row.total.toFixed(2).replace(".", ",")}","${row.category.replace(/"/g, '""')}"\n`;
+            });
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `relatorio_${periodLabel.toLowerCase()}_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } catch (err) {
+            console.error("Erro ao exportar CSV:", err);
+          }
+        };
+
+        const printReport = (title: string, data: any[], stats: any) => {
+          const printWindow = window.open("", "_blank");
+          if (!printWindow) return;
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>${title}</title>
+                <style>
+                  body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1f2937; line-height: 1.5; }
+                  h1 { font-size: 24px; margin-bottom: 5px; color: #111827; }
+                  .subtitle { font-size: 14px; color: #6b7280; margin-bottom: 30px; }
+                  .stats-grid { display: grid; grid-template-cols: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+                  .stat-card { border: 1px solid #e5e7eb; padding: 15px; border-radius: 12px; background: #f9fafb; }
+                  .stat-title { font-size: 11px; text-transform: uppercase; color: #6b7280; font-weight: bold; letter-spacing: 0.05em; }
+                  .stat-val { font-size: 20px; font-weight: bold; color: #111827; margin-top: 5px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                  th { border-bottom: 2px solid #e5e7eb; text-align: left; padding: 12px 10px; font-size: 13px; color: #374151; }
+                  td { border-bottom: 1px solid #f3f4f6; padding: 12px 10px; font-size: 13px; color: #4b5563; }
+                  .text-right { text-align: right; }
+                </style>
+              </head>
+              <body>
+                <h1>${title}</h1>
+                <div class="subtitle">Relatório gerado em ${new Date().toLocaleString('pt-BR')}</div>
+                
+                <div class="stats-grid">
+                  <div class="stat-card">
+                    <div class="stat-title">Faturamento Total</div>
+                    <div class="stat-val">R$${stats.faturamento.toFixed(2).replace(".", ",")}</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-title">Qtd. de Pedidos</div>
+                    <div class="stat-val">${stats.qtdPedidos}</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-title">Ticket Médio</div>
+                    <div class="stat-val">R$${stats.ticketMedio.toFixed(2).replace(".", ",")}</div>
                   </div>
                 </div>
-                <div className="bg-white p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
-                  <span className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saídas</span>
-                  <div className="text-sm sm:text-xl font-bold text-rose-600 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <ArrowDownCircle className="size-4 sm:size-5 shrink-0" />
-                    <span>{formatCurrency(transactions.filter(t => t.type === "exit").reduce((a, b) => a + b.value, 0))}</span>
+                
+                <h2>Desempenho dos Produtos</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Categoria</th>
+                      <th class="text-right">Quantidade</th>
+                      <th class="text-right">Total Faturado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.map(d => `
+                      <tr>
+                        <td>${d.name}</td>
+                        <td>${d.category}</td>
+                        <td class="text-right">${d.qty}</td>
+                        <td class="text-right">R$${d.total.toFixed(2).replace(".", ",")}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+                
+                <script>
+                  window.onload = function() {
+                    window.print();
+                    window.close();
+                  }
+                </script>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+        };
+
+        const renderBarChart = (data: { label: string; value: number }[], color: string) => {
+          const maxVal = Math.max(...data.map(d => d.value), 10);
+          const height = 150;
+          const width = 380;
+          const paddingLeft = 45;
+          const paddingRight = 10;
+          const paddingTop = 20;
+          const paddingBottom = 25;
+          const chartHeight = height - paddingTop - paddingBottom;
+          const chartWidth = width - paddingLeft - paddingRight;
+          const barWidth = (chartWidth / data.length) * 0.6;
+          const gap = (chartWidth / data.length) * 0.4;
+
+          return (
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+              {/* Background grid lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                const y = paddingTop + chartHeight * (1 - ratio);
+                const valLabel = (maxVal * ratio).toFixed(0);
+                return (
+                  <g key={idx} className="opacity-15">
+                    <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke="#71717a" strokeWidth={0.5} strokeDasharray="3 3" />
+                    <text x={paddingLeft - 8} y={y + 3} textAnchor="end" className="text-[8px] fill-zinc-500 font-sans">R${valLabel}</text>
+                  </g>
+                );
+              })}
+              
+              {/* Bars */}
+              {data.map((d, idx) => {
+                const barHeight = (d.value / maxVal) * chartHeight;
+                const x = paddingLeft + idx * (barWidth + gap) + gap/2;
+                const y = height - paddingBottom - barHeight;
+                
+                return (
+                  <g key={idx} className="group cursor-pointer">
+                    <rect
+                      x={x}
+                      y={y}
+                      width={barWidth}
+                      height={Math.max(barHeight, 2)}
+                      rx={3}
+                      fill={color}
+                      className="transition-all hover:opacity-85 duration-200"
+                    />
+                    <text
+                      x={x + barWidth/2}
+                      y={y - 5}
+                      textAnchor="middle"
+                      className="text-[8px] fill-zinc-850 font-bold opacity-0 group-hover:opacity-100 transition-opacity font-sans"
+                    >
+                      R${d.value.toFixed(0)}
+                    </text>
+                    <text
+                      x={x + barWidth/2}
+                      y={height - 8}
+                      textAnchor="middle"
+                      className="text-[8px] fill-zinc-500 font-sans uppercase"
+                    >
+                      {d.label}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          );
+        };
+
+        const filterTransactionsByPeriodLocal = (period: "hoje" | "semana" | "mes" | "ano", list: Transaction[]) => {
+          return list.filter((t) => {
+            const tTime = new Date(t.date).getTime();
+            if (period === "hoje") return tTime >= todayStart;
+            if (period === "semana") return tTime >= weekStart;
+            if (period === "mes") return tTime >= monthStart;
+            if (period === "ano") return tTime >= new Date(now.getFullYear(), 0, 1).getTime();
+            return true;
+          });
+        };
+
+        // Filtered transaction entries and exits
+        const entries = transactions.filter(t => t.type === "entry");
+        // const exits = transactions.filter(t => t.type === "exit");
+
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
+        const monthStart = todayStart - 30 * 24 * 60 * 60 * 1000;
+
+        const transactionsToday = transactions.filter(t => new Date(t.date).getTime() >= todayStart);
+        const transactionsWeek = transactions.filter(t => new Date(t.date).getTime() >= weekStart);
+        const transactionsMonth = transactions.filter(t => new Date(t.date).getTime() >= monthStart);
+
+        const entriesToday = transactionsToday.filter(t => t.type === "entry");
+        const entriesWeek = transactionsWeek.filter(t => t.type === "entry");
+        const entriesMonth = transactionsMonth.filter(t => t.type === "entry");
+
+        const faturamentoHoje = entriesToday.reduce((sum, t) => sum + t.value, 0);
+        const faturamentoSemana = entriesWeek.reduce((sum, t) => sum + t.value, 0);
+        const faturamentoMes = entriesMonth.reduce((sum, t) => sum + t.value, 0);
+        const faturamentoTotal = entries.reduce((sum, t) => sum + t.value, 0);
+
+        const qtdPedidosHoje = entriesToday.length;
+        const qtdPedidosSemana = entriesWeek.length;
+        const qtdPedidosMes = entriesMonth.length;
+        const qtdPedidosTotal = entries.length;
+
+        const ticketMedio = qtdPedidosTotal > 0 ? faturamentoTotal / qtdPedidosTotal : 0;
+
+        // Product & Category Sales
+        const productSales: Record<string, { quantity: number; totalValue: number; category: string }> = {};
+        const categorySales: Record<string, number> = {};
+
+        transactions.forEach(t => {
+          if (t.type === "entry" && t.items) {
+            t.items.forEach(item => {
+              if (!productSales[item.name]) {
+                productSales[item.name] = { quantity: 0, totalValue: 0, category: item.category || "Outros" };
+              }
+              productSales[item.name].quantity += item.quantity;
+              productSales[item.name].totalValue += item.price * item.quantity;
+              
+              const cat = item.category || "Outros";
+              categorySales[cat] = (categorySales[cat] || 0) + item.quantity;
+            });
+          }
+        });
+
+        const sortedProducts = Object.entries(productSales).sort((a, b) => b[1].quantity - a[1].quantity);
+        const produtoMaisVendido = sortedProducts[0]?.[0] || "Nenhum";
+        const produtoMaisVendidoQtd = sortedProducts[0]?.[1].quantity || 0;
+
+        const sortedCategories = Object.entries(categorySales).sort((a, b) => b[1] - a[1]);
+        const categoriaMaisVendida = sortedCategories[0]?.[0] || "Nenhuma";
+        const categoriaMaisVendidaQtd = sortedCategories[0]?.[1] || 0;
+
+        // Chart calculations
+        const last7Days = Array.from({ length: 7 }).map((_, i) => new Date(todayStart - i * 24 * 60 * 60 * 1000)).reverse();
+        const salesByDayData = last7Days.map(day => {
+          const dayStart = day.getTime();
+          const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+          const dayEntries = entries.filter(t => {
+            const tTime = new Date(t.date).getTime();
+            return tTime >= dayStart && tTime < dayEnd;
+          });
+          return {
+            label: day.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' }),
+            value: dayEntries.reduce((sum, t) => sum + t.value, 0)
+          };
+        });
+
+        const salesByWeekData = Array.from({ length: 4 }).map((_, i) => {
+          const end = todayStart - (i * 7) * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000;
+          const start = end - 7 * 24 * 60 * 60 * 1000;
+          const weekEntries = entries.filter(t => {
+            const tTime = new Date(t.date).getTime();
+            return tTime >= start && tTime < end;
+          });
+          return {
+            label: `${new Date(start).getDate()}/${new Date(start).getMonth() + 1}`,
+            value: weekEntries.reduce((sum, t) => sum + t.value, 0)
+          };
+        }).reverse();
+
+        const salesByMonthData = Array.from({ length: 6 }).map((_, i) => {
+          const d = new Date();
+          d.setMonth(now.getMonth() - i);
+          const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+          const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+          const monthEntries = entries.filter(t => {
+            const tTime = new Date(t.date).getTime();
+            return tTime >= start && tTime < end;
+          });
+          return {
+            label: d.toLocaleDateString('pt-BR', { month: 'short' }),
+            value: monthEntries.reduce((sum, t) => sum + t.value, 0)
+          };
+        }).reverse();
+
+        // Stock calculations
+        const totalItemsCount = menu.length;
+        const lowStockCount = menu.filter(m => enableInventory && m.stockQuantity !== undefined && m.stockQuantity > 0 && m.stockQuantity <= (m.minStockLimit || 0)).length;
+        const outOfStockCount = menu.filter(m => enableInventory && m.stockQuantity !== undefined && m.stockQuantity <= 0).length;
+        const valorEstoqueTotal = menu.reduce((sum, m) => sum + (m.costPrice || 0) * (m.stockQuantity || 0), 0);
+        const lucroPotencialEstoqueTotal = menu.reduce((sum, m) => sum + ((m.price - (m.costPrice || 0)) * (m.stockQuantity || 0)), 0);
+
+        // Period-filtered transactions
+        const selectedPeriodTransactions = filterTransactionsByPeriodLocal(financePeriod, transactions);
+        const periodEntries = selectedPeriodTransactions.filter(t => t.type === "entry");
+        const periodExits = selectedPeriodTransactions.filter(t => t.type === "exit");
+        const receitaPeriodo = periodEntries.reduce((sum, t) => sum + t.value, 0);
+        const custosPeriodo = periodExits.reduce((sum, t) => sum + t.value, 0);
+        
+        let lucroEstimadoPeriodo = 0;
+        periodEntries.forEach(t => {
+          if (t.items && t.items.length > 0) {
+            t.items.forEach(item => {
+              lucroEstimadoPeriodo += (item.price - (item.costPrice || 0)) * item.quantity;
+            });
+          } else {
+            lucroEstimadoPeriodo += t.value;
+          }
+        });
+        lucroEstimadoPeriodo -= custosPeriodo;
+        const margemMediaPeriodo = receitaPeriodo > 0 ? (Math.max(0, lucroEstimadoPeriodo) / receitaPeriodo) * 100 : 0;
+
+        // Relatórios list processing
+        const reportPeriodTransactions = filterTransactionsByPeriodLocal(
+          relatorioPeriod === "diario" ? "hoje" : relatorioPeriod === "semanal" ? "semana" : "mes",
+          transactions
+        );
+        const reportProductSales: Record<string, { qty: number; total: number; category: string }> = {};
+        const reportCategorySales: Record<string, number> = {};
+        let reportFaturamento = 0;
+        let reportQtdPedidos = 0;
+
+        reportPeriodTransactions.forEach(t => {
+          if (t.type === "entry") {
+            reportFaturamento += t.value;
+            reportQtdPedidos++;
+            if (t.items) {
+              t.items.forEach(item => {
+                if (!reportProductSales[item.name]) {
+                  reportProductSales[item.name] = { qty: 0, total: 0, category: item.category || "Outros" };
+                }
+                reportProductSales[item.name].qty += item.quantity;
+                reportProductSales[item.name].total += item.price * item.quantity;
+                
+                const cat = item.category || "Outros";
+                reportCategorySales[cat] = (reportCategorySales[cat] || 0) + item.quantity;
+              });
+            }
+          }
+        });
+
+        const reportProductsList = Object.entries(reportProductSales).map(([name, data]) => ({
+          name,
+          category: data.category,
+          qty: data.qty,
+          total: data.total
+        }));
+        const reportProductsMostSold = [...reportProductsList].sort((a, b) => b.qty - a.qty);
+        
+        // Find products in menu with 0 or low sales for "less sold"
+        const reportLeastSold = menu.map(m => {
+          const sold = reportProductSales[m.name];
+          return {
+            name: m.name,
+            category: m.category,
+            qty: sold ? sold.qty : 0,
+            total: sold ? sold.total : 0
+          };
+        }).sort((a, b) => a.qty - b.qty);
+
+        const reportCategoriesList = Object.entries(reportCategorySales).map(([name, qty]) => ({ name, qty }))
+          .sort((a, b) => b.qty - a.qty);
+
+        const reportStats = {
+          faturamento: reportFaturamento,
+          qtdPedidos: reportQtdPedidos,
+          ticketMedio: reportQtdPedidos > 0 ? reportFaturamento / reportQtdPedidos : 0
+        };
+
+        // Alertas calculation
+        const lowStockAlerts = menu.filter(m => enableInventory && m.stockQuantity !== undefined && m.stockQuantity > 0 && m.stockQuantity <= (m.minStockLimit || 0));
+        const outOfStockAlerts = menu.filter(m => enableInventory && m.stockQuantity !== undefined && m.stockQuantity <= 0);
+        const noSalesAlerts = menu.filter(m => !productSales[m.name]);
+        const highDemandAlerts = Object.entries(productSales)
+          .filter(([_, data]) => data.quantity >= 5)
+          .map(([name, data]) => ({ name, quantity: data.quantity, category: data.category }));
+
+        return (
+          <div className="fixed inset-0 z-[180] bg-black/75 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-zinc-150 animate-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="p-6 border-b flex items-center justify-between bg-zinc-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="size-11 bg-indigo-600 rounded-2xl grid place-items-center text-white shadow-lg shadow-indigo-150">
+                    <SlidersHorizontal className="size-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-900 leading-tight">Painel de Gestão & Operação</h2>
+                    <p className="text-xs text-zinc-500">Controle de estoque, faturamento, custos e desempenho</p>
                   </div>
                 </div>
-                <div className="bg-white p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
-                  <span className="text-[10px] sm:text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saldo</span>
-                  <div className="text-sm sm:text-xl font-bold text-zinc-900 flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                    <DollarSign className="size-4 sm:size-5 shrink-0" />
-                    <span>{formatCurrency(transactions.reduce((a, b) => b.type === "entry" ? a + b.value : a - b.value, 0))}</span>
-                  </div>
-                </div>
+                <button onClick={() => setShowFinanceEditor(false)} className="p-2 hover:bg-zinc-200/60 rounded-xl transition">
+                  <X className="size-5 text-zinc-500" />
+                </button>
               </div>
 
-              {/* Add Transaction Form */}
-              <div className="bg-white p-5 rounded-2xl border shadow-sm">
-                <h3 className="text-sm font-semibold mb-4">Novo Lançamento</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
-                  <div className="sm:col-span-3">
-                    <label className="text-xs font-medium mb-1 block">Tipo</label>
-                    <select
-                      value={newTransaction.type}
-                      onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value as "entry" | "exit" })}
-                      className="w-full border h-10 rounded-xl px-3 text-sm"
-                    >
-                      <option value="entry">Entrada</option>
-                      <option value="exit">Saída</option>
-                    </select>
-                  </div>
-                  <div className="sm:col-span-5">
-                    <label className="text-xs font-medium mb-1 block">Descrição</label>
-                    <input
-                      placeholder="Ex: Venda Mesa 04"
-                      value={newTransaction.description || ""}
-                      onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                      className="w-full border h-10 rounded-xl px-3 text-sm"
-                    />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <label className="text-xs font-medium mb-1 block">Valor (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={newTransaction.value || ""}
-                      onChange={(e) => setNewTransaction({ ...newTransaction, value: parseFloat(e.target.value) })}
-                      className="w-full border h-10 rounded-xl px-3 text-sm"
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <button
-                      disabled={!newTransaction.description || !newTransaction.value}
-                      onClick={async () => {
-                        if (!tenantId || !newTransaction.description || !newTransaction.value) return;
-                        const t: Transaction = {
-                          id: "t" + Date.now(),
-                          type: newTransaction.type as "entry" | "exit",
-                          description: newTransaction.description,
-                          value: newTransaction.value,
-                          date: new Date().toISOString()
-                        };
-                        
-                        setTransactions([t, ...transactions]);
-                        setNewTransaction({ type: "entry", description: "", value: 0 });
-                        
-                        try {
-                          const docRef = doc(db, "restaurants", tenantId, "transactions", t.id);
-                          await setDoc(docRef, t);
-                          setToast("Lançamento adicionado");
-                        } catch (err) {
-                          console.error(err);
-                          alert("Erro ao salvar lançamento");
-                        }
-                      }}
-                      className="h-10 w-full bg-indigo-600 text-white rounded-xl flex items-center justify-center disabled:opacity-50"
-                    >
-                      <Plus className="size-5" />
-                    </button>
-                  </div>
+              {/* Sidebar + Body */}
+              <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                {/* Sidebar tabs */}
+                <div className="flex md:flex-col border-b md:border-b-0 md:border-r border-zinc-100 bg-zinc-50/30 p-3 gap-1 md:w-60 overflow-x-auto md:overflow-x-visible md:overflow-y-auto shrink-0 scrollbar-none">
+                  {[
+                    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+                    { id: "estoque", label: "Estoque e Custos", icon: Package },
+                    { id: "financeiro", label: "Financeiro", icon: DollarSign },
+                    { id: "relatorios", label: "Relatórios", icon: FileText },
+                    { id: "alertas", label: `Alertas (${lowStockAlerts.length + outOfStockAlerts.length})`, icon: AlertTriangle, badge: lowStockAlerts.length + outOfStockAlerts.length > 0 },
+                  ].map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = gestaoTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setGestaoTab(tab.id as any)}
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 text-left whitespace-nowrap md:w-full",
+                          isActive
+                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-150/40"
+                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                        )}
+                      >
+                        <Icon className={cn("size-4.5 shrink-0", isActive ? "text-white" : "text-zinc-500")} />
+                        <span>{tab.label}</span>
+                        {tab.badge && (
+                          <span className={cn("ml-auto size-2 rounded-full", isActive ? "bg-white" : "bg-red-500")} />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
 
-              {/* Transactions List */}
-              <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                {loadingTransactions ? (
-                  <div className="p-8 text-center text-zinc-500 text-sm">Carregando...</div>
-                ) : transactions.length === 0 ? (
-                  <div className="p-8 text-center text-zinc-500 text-sm">Nenhum lançamento registrado.</div>
-                ) : (
-                  <div className="divide-y">
-                    {transactions.map(t => (
-                      <div key={t.id} className="p-4 flex items-center justify-between hover:bg-zinc-50 transition">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("size-8 rounded-full grid place-items-center", t.type === "entry" ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600")}>
-                            {t.type === "entry" ? <ArrowUpCircle className="size-4" /> : <ArrowDownCircle className="size-4" />}
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm text-zinc-900">{t.description}</div>
-                            <div className="text-xs text-zinc-500">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
-                          </div>
+                {/* Main Content Area */}
+                <div className="flex-1 overflow-y-auto p-6 bg-white min-w-0">
+                  {/* TABS */}
+
+                  {/* 1. DASHBOARD */}
+                  {gestaoTab === "dashboard" && (
+                    <div className="space-y-6">
+                      {/* KPIs Grid */}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-br from-indigo-50 to-white p-4 rounded-2xl border border-indigo-100/50 shadow-sm">
+                          <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Vendas Hoje</span>
+                          <span className="text-xl font-black text-indigo-950 mt-1 block">{formatCurrency(faturamentoHoje)}</span>
+                          <span className="text-xs text-zinc-500 mt-1 block">{qtdPedidosHoje} pedidos</span>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className={cn("font-bold text-sm", t.type === "entry" ? "text-emerald-600" : "text-rose-600")}>
-                            {t.type === "entry" ? "+" : "-"}{formatCurrency(t.value)}
-                          </div>
-                          <button
-                            onClick={async () => {
-                              if (!tenantId || !confirm("Tem certeza que deseja apagar?")) return;
-                              setTransactions(transactions.filter(x => x.id !== t.id));
-                              try {
-                                await deleteDoc(doc(db, "restaurants", tenantId, "transactions", t.id));
-                              } catch (err) {
-                                console.error(err);
-                              }
-                            }}
-                            className="p-1.5 text-zinc-400 hover:text-red-500 transition rounded-lg hover:bg-red-50"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                        <div className="bg-gradient-to-br from-emerald-50 to-white p-4 rounded-2xl border border-emerald-100/50 shadow-sm">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Vendas da Semana</span>
+                          <span className="text-xl font-black text-emerald-950 mt-1 block">{formatCurrency(faturamentoSemana)}</span>
+                          <span className="text-xs text-zinc-500 mt-1 block">{qtdPedidosSemana} pedidos</span>
+                        </div>
+                        <div className="bg-gradient-to-br from-amber-50 to-white p-4 rounded-2xl border border-amber-100/50 shadow-sm">
+                          <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Vendas do Mês</span>
+                          <span className="text-xl font-black text-amber-950 mt-1 block">{formatCurrency(faturamentoMes)}</span>
+                          <span className="text-xs text-zinc-500 mt-1 block">{qtdPedidosMes} pedidos</span>
+                        </div>
+                        <div className="bg-gradient-to-br from-zinc-50 to-white p-4 rounded-2xl border border-zinc-200/50 shadow-sm">
+                          <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider block">Ticket Médio</span>
+                          <span className="text-xl font-black text-zinc-950 mt-1 block">{formatCurrency(ticketMedio)}</span>
+                          <span className="text-xs text-zinc-500 mt-1 block">Faturamento total: {formatCurrency(faturamentoTotal)}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      {/* Best Sellers */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 border rounded-2xl bg-zinc-50/50 flex items-center gap-4">
+                          <div className="size-10 bg-indigo-100 rounded-xl grid place-items-center shrink-0">
+                            <TrendingUp className="size-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <span className="text-xs text-zinc-500 block">Produto Mais Vendido</span>
+                            <span className="font-bold text-zinc-900 block">{produtoMaisVendido}</span>
+                            <span className="text-xs text-zinc-500">{produtoMaisVendidoQtd} unidades vendidas</span>
+                          </div>
+                        </div>
+                        <div className="p-4 border rounded-2xl bg-zinc-50/50 flex items-center gap-4">
+                          <div className="size-10 bg-emerald-100 rounded-xl grid place-items-center shrink-0">
+                            <Tag className="size-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <span className="text-xs text-zinc-500 block">Categoria Mais Vendida</span>
+                            <span className="font-bold text-zinc-900 block">{categoriaMaisVendida}</span>
+                            {categoriaMaisVendida !== "Nenhuma" && (
+                              <span className="text-xs text-zinc-500">{categoriaMaisVendidaQtd} itens vendidos</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Charts section */}
+                      <div className="border rounded-3xl p-5 bg-white shadow-sm space-y-4">
+                        <div className="flex items-center justify-between border-b pb-4">
+                          <div>
+                            <h3 className="font-bold text-zinc-900">Evolução das Vendas</h3>
+                            <p className="text-xs text-zinc-500">Gráfico de faturamento em tempo real</p>
+                          </div>
+                          <div className="flex bg-zinc-100 p-1 rounded-xl">
+                            {[
+                              { id: "dia", label: "Vendas por dia" },
+                              { id: "semana", label: "Vendas por semana" },
+                              { id: "mes", label: "Vendas por mês" }
+                            ].map(p => (
+                              <button
+                                key={p.id}
+                                onClick={() => setChartPeriod(p.id as any)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                  chartPeriod === p.id ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+                                )}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="pt-4">
+                          {chartPeriod === "dia" && renderBarChart(salesByDayData, "#4f46e5")}
+                          {chartPeriod === "semana" && renderBarChart(salesByWeekData, "#10b981")}
+                          {chartPeriod === "mes" && renderBarChart(salesByMonthData, "#f59e0b")}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. ESTOQUE E CUSTOS */}
+                  {gestaoTab === "estoque" && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-2xl border">
+                        <div className="flex items-center gap-3">
+                          <Package className="size-5 text-zinc-700" />
+                          <div>
+                            <span className="font-bold text-zinc-800 block">Ativar Controle de Estoque e Custos</span>
+                            <span className="text-xs text-zinc-500">Habilite para gerenciar quantidades, custos unitários e alarmes</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={toggleInventoryControl}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                            enableInventory ? "bg-indigo-600" : "bg-zinc-200"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              enableInventory ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                      </div>
+
+                      {enableInventory ? (
+                        <>
+                          {/* Stock KPIs */}
+                          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                            <div className="bg-zinc-50/50 p-3 rounded-2xl border text-center">
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Total Cadastrados</span>
+                              <span className="text-2xl font-extrabold text-zinc-900 block mt-1">{totalItemsCount}</span>
+                            </div>
+                            <div className="bg-amber-50/40 p-3 rounded-2xl border border-amber-100 text-center">
+                              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Estoque Baixo</span>
+                              <span className="text-2xl font-extrabold text-amber-900 block mt-1">{lowStockCount}</span>
+                            </div>
+                            <div className="bg-red-50/40 p-3 rounded-2xl border border-red-100 text-center">
+                              <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">Produtos Esgotados</span>
+                              <span className="text-2xl font-extrabold text-red-900 block mt-1">{outOfStockCount}</span>
+                            </div>
+                            <div className="bg-indigo-50/40 p-3 rounded-2xl border border-indigo-100 text-center">
+                              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Valor Total do Estoque</span>
+                              <span className="text-xl font-extrabold text-indigo-900 block mt-1">{formatCurrency(valorEstoqueTotal)}</span>
+                            </div>
+                            <div className="bg-emerald-50/40 p-3 rounded-2xl border border-emerald-100 text-center">
+                              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Lucro Potencial</span>
+                              <span className="text-xl font-extrabold text-emerald-900 block mt-1">{formatCurrency(lucroPotencialEstoqueTotal)}</span>
+                            </div>
+                          </div>
+
+                          {/* Table & Search */}
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
+                              <input
+                                placeholder="Buscar produtos para ajuste rápido..."
+                                value={stockSearch}
+                                onChange={(e) => setStockSearch(e.target.value)}
+                                className="w-full border h-10 rounded-xl pl-10 pr-4 text-sm bg-white"
+                              />
+                            </div>
+
+                            <div className="border rounded-2xl overflow-hidden shadow-sm bg-white">
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left text-zinc-500">
+                                  <thead className="text-xs uppercase bg-zinc-50 text-zinc-700 font-bold border-b">
+                                    <tr>
+                                      <th className="p-4">Produto</th>
+                                      <th className="p-4">Status</th>
+                                      <th className="p-4 text-center">Qtd Estoque</th>
+                                      <th className="p-4">Custo</th>
+                                      <th className="p-4">Preço</th>
+                                      <th className="p-4">M. Lucro</th>
+                                      <th className="p-4">Mín. Alerta</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y">
+                                    {menu.filter(m => !stockSearch || m.name.toLowerCase().includes(stockSearch.toLowerCase())).map(item => {
+                                      const currentStock = item.stockQuantity !== undefined ? item.stockQuantity : 0;
+                                      const minLimit = item.minStockLimit !== undefined ? item.minStockLimit : 0;
+                                      
+                                      let statusColor = "bg-emerald-500";
+                                      let statusLabel = "Estoque Normal";
+                                      if (currentStock <= 0) {
+                                        statusColor = "bg-red-500";
+                                        statusLabel = "Produto Esgotado";
+                                      } else if (currentStock <= minLimit) {
+                                        statusColor = "bg-amber-500";
+                                        statusLabel = "Estoque Baixo";
+                                      }
+
+                                      const lucroUnit = item.price - (item.costPrice || 0);
+                                      const margem = item.price > 0 ? (lucroUnit / item.price) * 100 : 0;
+
+                                      return (
+                                        <tr key={item.id} className="hover:bg-zinc-50 transition">
+                                          <td className="p-4 font-semibold text-zinc-900">{item.name}</td>
+                                          <td className="p-4">
+                                            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+                                              <span className={cn("size-2 rounded-full animate-pulse", statusColor)} />
+                                              {statusLabel}
+                                            </span>
+                                          </td>
+                                          <td className="p-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                              <button
+                                                onClick={() => handleQuickStockUpdate(item, currentStock - 1)}
+                                                className="size-7 rounded-lg border bg-zinc-50 flex items-center justify-center font-bold hover:bg-zinc-100"
+                                              >
+                                                -
+                                              </button>
+                                              <input
+                                                type="number"
+                                                value={item.stockQuantity !== undefined ? item.stockQuantity : ""}
+                                                onChange={(e) => handleQuickStockUpdate(item, e.target.value === "" ? 0 : parseInt(e.target.value) || 0)}
+                                                className="w-12 text-center border rounded-lg h-7 text-xs bg-white font-semibold text-zinc-800"
+                                              />
+                                              <button
+                                                onClick={() => handleQuickStockUpdate(item, currentStock + 1)}
+                                                className="size-7 rounded-lg border bg-zinc-50 flex items-center justify-center font-bold hover:bg-zinc-100"
+                                              >
+                                                +
+                                              </button>
+                                            </div>
+                                          </td>
+                                          <td className="p-4">
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-xs text-zinc-400">R$</span>
+                                              <input
+                                                type="number"
+                                                step="0.01"
+                                                value={item.costPrice !== undefined ? item.costPrice : ""}
+                                                placeholder="0.00"
+                                                onChange={(e) => handleQuickCostUpdate(item, parseFloat(e.target.value) || 0)}
+                                                className="w-16 border rounded-lg h-7 px-1 text-xs bg-white font-semibold text-zinc-850"
+                                              />
+                                            </div>
+                                          </td>
+                                          <td className="p-4 font-semibold text-zinc-900">{formatCurrency(item.price)}</td>
+                                          <td className="p-4">
+                                            <div className="text-xs font-semibold text-zinc-700">{margem.toFixed(0)}%</div>
+                                            <div className="text-[10px] text-emerald-600">+{formatCurrency(lucroUnit)}</div>
+                                          </td>
+                                          <td className="p-4">
+                                            <input
+                                              type="number"
+                                              value={item.minStockLimit !== undefined ? item.minStockLimit : ""}
+                                              onChange={(e) => handleQuickMinLimitUpdate(item, e.target.value === "" ? 0 : parseInt(e.target.value) || 0)}
+                                              className="w-12 text-center border rounded-lg h-7 text-xs bg-white text-zinc-700"
+                                            />
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-14 border border-dashed rounded-3xl bg-zinc-50/50 space-y-4">
+                          <Package className="size-12 mx-auto text-zinc-300" />
+                          <div>
+                            <h3 className="font-bold text-zinc-700">Controle de Estoque Desativado</h3>
+                            <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
+                              Ative o controle de estoque nas configurações acima para poder monitorar o estoque dos produtos e gerenciar margens de lucro de forma otimizada.
+                            </p>
+                          </div>
+                          <button
+                            onClick={toggleInventoryControl}
+                            className="h-10 px-5 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition"
+                          >
+                            Ativar Agora
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 3. FINANCEIRO */}
+                  {gestaoTab === "financeiro" && (
+                    <div className="space-y-6">
+                      {/* Period Filter */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-zinc-900">Movimentações Financeiras</h3>
+                        <div className="flex bg-zinc-100 p-1 rounded-xl">
+                          {[
+                            { id: "hoje", label: "Hoje" },
+                            { id: "semana", label: "Semana" },
+                            { id: "mes", label: "Mês" },
+                            { id: "ano", label: "Ano" }
+                          ].map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => setFinancePeriod(p.id as any)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                financePeriod === p.id ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+                              )}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Financial KPIs */}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white p-4 rounded-2xl border shadow-sm">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Receita Total</span>
+                          <span className="text-xl font-bold text-emerald-600 mt-1 block">+{formatCurrency(receitaPeriodo)}</span>
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl border shadow-sm">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Custos Cadastrados</span>
+                          <span className="text-xl font-bold text-rose-600 mt-1 block">-{formatCurrency(custosPeriodo)}</span>
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl border shadow-sm">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Lucro Estimado</span>
+                          <span className={cn("text-xl font-bold mt-1 block", lucroEstimadoPeriodo >= 0 ? "text-indigo-600" : "text-rose-600")}>
+                            {formatCurrency(lucroEstimadoPeriodo)}
+                          </span>
+                        </div>
+                        <div className="bg-white p-4 rounded-2xl border shadow-sm">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Margem Média de Lucro</span>
+                          <span className="text-xl font-bold text-zinc-900 mt-1 block">{margemMediaPeriodo.toFixed(1)}%</span>
+                        </div>
+                      </div>
+
+                      {/* Add Transaction Form */}
+                      <div className="bg-white p-5 rounded-2xl border shadow-sm">
+                        <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-3">Novo Lançamento</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                          <div className="sm:col-span-3">
+                            <label className="text-[11px] font-medium mb-1 block">Tipo</label>
+                            <select
+                              value={newTransaction.type}
+                              onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value as "entry" | "exit" })}
+                              className="w-full border h-9 rounded-lg px-2 text-xs bg-white"
+                            >
+                              <option value="entry">Receita (Entrada)</option>
+                              <option value="exit">Despesa (Saída)</option>
+                            </select>
+                          </div>
+                          <div className="sm:col-span-5">
+                            <label className="text-[11px] font-medium mb-1 block">Descrição</label>
+                            <input
+                              placeholder="Ex: Pagamento Fornecedor batata"
+                              value={newTransaction.description || ""}
+                              onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
+                            />
+                          </div>
+                          <div className="sm:col-span-3">
+                            <label className="text-[11px] font-medium mb-1 block">Valor (R$)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="0,00"
+                              value={newTransaction.value || ""}
+                              onChange={(e) => setNewTransaction({ ...newTransaction, value: parseFloat(e.target.value) })}
+                              className="w-full border h-9 rounded-lg px-3 text-xs bg-white"
+                            />
+                          </div>
+                          <div className="sm:col-span-1">
+                            <button
+                              disabled={!newTransaction.description || !newTransaction.value}
+                              onClick={async () => {
+                                if (!tenantId || !newTransaction.description || !newTransaction.value) return;
+                                const t: Transaction = {
+                                  id: "t" + Date.now(),
+                                  type: newTransaction.type as "entry" | "exit",
+                                  description: newTransaction.description,
+                                  value: newTransaction.value,
+                                  date: new Date().toISOString()
+                                };
+                                
+                                setTransactions([t, ...transactions]);
+                                setNewTransaction({ type: "entry", description: "", value: 0 });
+                                
+                                try {
+                                  const docRef = doc(db, "restaurants", tenantId, "transactions", t.id);
+                                  await setDoc(docRef, t);
+                                  setToast("Lançamento adicionado");
+                                } catch (err) {
+                                  console.error(err);
+                                  alert("Erro ao salvar lançamento");
+                                }
+                              }}
+                              className="h-9 w-full bg-indigo-600 text-white rounded-lg flex items-center justify-center disabled:opacity-50 hover:bg-indigo-700 transition"
+                            >
+                              <Plus className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Transactions list */}
+                      <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
+                        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+                          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Histórico de Vendas ({selectedPeriodTransactions.length})</span>
+                        </div>
+                        {selectedPeriodTransactions.length === 0 ? (
+                          <div className="p-8 text-center text-zinc-400 text-xs">Nenhum lançamento registrado neste período.</div>
+                        ) : (
+                          <div className="divide-y max-h-[300px] overflow-y-auto">
+                            {selectedPeriodTransactions.map(t => (
+                              <div key={t.id} className="p-3.5 flex items-center justify-between hover:bg-zinc-50 transition">
+                                <div className="flex items-center gap-3">
+                                  <div className={cn("size-8 rounded-full grid place-items-center shrink-0", t.type === "entry" ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600")}>
+                                    {t.type === "entry" ? <ArrowUpCircle className="size-4" /> : <ArrowDownCircle className="size-4" />}
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold text-zinc-900 text-sm">{t.description}</div>
+                                    <div className="text-[10px] text-zinc-500">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className={cn("font-bold text-sm", t.type === "entry" ? "text-emerald-600" : "text-rose-600")}>
+                                    {t.type === "entry" ? "+" : "-"}{formatCurrency(t.value)}
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!tenantId || !confirm("Tem certeza que deseja apagar?")) return;
+                                      setTransactions(transactions.filter(x => x.id !== t.id));
+                                      try {
+                                        await deleteDoc(doc(db, "restaurants", tenantId, "transactions", t.id));
+                                      } catch (err) {
+                                        console.error(err);
+                                      }
+                                    }}
+                                    className="p-1.5 text-zinc-400 hover:text-red-500 transition rounded-lg hover:bg-red-50"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. RELATÓRIOS */}
+                  {gestaoTab === "relatorios" && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between border-b pb-4">
+                        <div>
+                          <h3 className="font-bold text-zinc-900">Relatórios Automáticos</h3>
+                          <p className="text-xs text-zinc-500">Analise o fluxo de vendas e produtos de forma automatizada</p>
+                        </div>
+                        <div className="flex bg-zinc-100 p-1 rounded-xl">
+                          {[
+                            { id: "diario", label: "Relatório diário" },
+                            { id: "semanal", label: "Relatório semanal" },
+                            { id: "mensal", label: "Relatório mensal" }
+                          ].map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => setRelatorioPeriod(p.id as any)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                relatorioPeriod === p.id ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+                              )}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Report Stats Summary */}
+                      <div className="grid grid-cols-3 gap-4 bg-zinc-50 p-4 rounded-2xl border">
+                        <div className="text-center">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Faturamento no Período</span>
+                          <span className="text-xl font-bold text-zinc-900 mt-1 block">{formatCurrency(reportStats.faturamento)}</span>
+                        </div>
+                        <div className="text-center border-x">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Pedidos Concluídos</span>
+                          <span className="text-xl font-bold text-zinc-900 mt-1 block">{reportStats.qtdPedidos}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Ticket Médio</span>
+                          <span className="text-xl font-bold text-zinc-900 mt-1 block">{formatCurrency(reportStats.ticketMedio)}</span>
+                        </div>
+                      </div>
+
+                      {/* Top Selling Products */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="border rounded-2xl p-4 bg-white shadow-sm space-y-3">
+                          <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
+                            <ArrowUpCircle className="size-4.5 text-emerald-500" /> Produtos mais vendidos
+                          </h4>
+                          {reportProductsMostSold.length === 0 ? (
+                            <p className="text-xs text-zinc-400 py-6 text-center">Nenhum item vendido neste período.</p>
+                          ) : (
+                            <div className="divide-y max-h-[200px] overflow-y-auto">
+                              {reportProductsMostSold.slice(0, 5).map((p, idx) => (
+                                <div key={p.name} className="py-2.5 flex items-center justify-between text-xs">
+                                  <div className="font-semibold text-zinc-900">
+                                    <span className="text-zinc-400 mr-1.5">#{idx + 1}</span>
+                                    {p.name}
+                                  </div>
+                                  <div className="text-zinc-600 text-right">
+                                    <span className="font-bold text-zinc-800">{p.qty} unidades</span>
+                                    <span className="block text-[10px] text-zinc-400">{formatCurrency(p.total)}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border rounded-2xl p-4 bg-white shadow-sm space-y-3">
+                          <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
+                            <ArrowDownCircle className="size-4.5 text-rose-400" /> Produtos menos vendidos
+                          </h4>
+                          {reportLeastSold.length === 0 ? (
+                            <p className="text-xs text-zinc-400 py-6 text-center">Sem produtos cadastrados.</p>
+                          ) : (
+                            <div className="divide-y max-h-[200px] overflow-y-auto">
+                              {reportLeastSold.slice(0, 5).map((p, idx) => (
+                                <div key={p.name} className="py-2.5 flex items-center justify-between text-xs">
+                                  <div className="font-semibold text-zinc-900">
+                                    <span className="text-zinc-400 mr-1.5">#{idx + 1}</span>
+                                    {p.name}
+                                  </div>
+                                  <div className="text-zinc-600 text-right">
+                                    <span className="font-bold text-zinc-800">{p.qty} unidades</span>
+                                    <span className="block text-[10px] text-zinc-400">{formatCurrency(p.total)}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Category performance */}
+                      <div className="border rounded-2xl p-4 bg-white shadow-sm space-y-3">
+                        <h4 className="text-xs font-bold text-zinc-700 uppercase tracking-wider border-b pb-2">Categorias mais vendidas</h4>
+                        {reportCategoriesList.length === 0 ? (
+                          <p className="text-xs text-zinc-400 py-6 text-center">Sem dados de categorias neste período.</p>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {reportCategoriesList.slice(0, 4).map(c => (
+                              <div key={c.name} className="bg-zinc-50 p-3 rounded-xl border text-center">
+                                <span className="text-zinc-500 text-[10px] block truncate">{c.name}</span>
+                                <span className="font-bold text-sm text-zinc-900 block mt-1">{c.qty} itens</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Export Actions */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => exportToCSV(relatorioPeriod, reportProductsMostSold)}
+                          className="flex-1 flex items-center justify-center gap-2 h-11 border border-zinc-200 rounded-2xl text-xs font-bold hover:bg-zinc-50 transition"
+                        >
+                          <FileText className="size-4" /> Exportar Relatório
+                        </button>
+                        <button
+                          onClick={() => printReport(`Relatório ${relatorioPeriod.charAt(0).toUpperCase() + relatorioPeriod.slice(1)} - Menu Digital Pro`, reportProductsMostSold, reportStats)}
+                          className="flex-1 flex items-center justify-center gap-2 h-11 bg-zinc-900 text-white rounded-2xl text-xs font-bold hover:bg-zinc-850 transition shadow-sm"
+                        >
+                          <Settings className="size-4" /> Imprimir Relatório
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. ALERTAS */}
+                  {gestaoTab === "alertas" && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-bold text-zinc-900">Mural de Alertas & Notificações</h3>
+                        <p className="text-xs text-zinc-500">Acompanhamento e alertas inteligentes em tempo real</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Esgotados */}
+                        {outOfStockAlerts.map(p => (
+                          <div key={p.id} className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3">
+                            <div className="size-8 rounded-full bg-red-100 text-red-600 grid place-items-center shrink-0 animate-pulse">
+                              <AlertTriangle className="size-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-bold text-red-950 text-xs block">Produtos esgotados</span>
+                              <p className="text-xs text-red-800 truncate">{p.name} está sem estoque no momento.</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                handleQuickStockUpdate(p, 10);
+                                setToast("Estoque ajustado para 10 unidades");
+                              }}
+                              className="px-3 h-8 bg-red-600 text-white rounded-lg text-[10px] font-bold shrink-0 hover:bg-red-700 transition"
+                            >
+                              Repor +10
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Baixo Estoque */}
+                        {lowStockAlerts.map(p => (
+                          <div key={p.id} className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
+                            <div className="size-8 rounded-full bg-amber-100 text-amber-600 grid place-items-center shrink-0">
+                              <AlertTriangle className="size-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-bold text-amber-950 text-xs block">Estoque baixo</span>
+                              <p className="text-xs text-amber-800 truncate">{p.name} tem apenas {p.stockQuantity} unidades restando (Limite mínimo: {p.minStockLimit}).</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                handleQuickStockUpdate(p, (p.stockQuantity || 0) + 15);
+                                setToast("Adicionado +15 unidades");
+                              }}
+                              className="px-3 h-8 bg-amber-600 text-white rounded-lg text-[10px] font-bold shrink-0 hover:bg-amber-700 transition"
+                            >
+                              Repor +15
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Alta demanda */}
+                        {highDemandAlerts.slice(0, 3).map(p => (
+                          <div key={p.name} className="p-4 bg-indigo-50 border border-indigo-150 rounded-2xl flex items-center gap-3">
+                            <div className="size-8 rounded-full bg-indigo-100 text-indigo-600 grid place-items-center shrink-0">
+                              <TrendingUp className="size-4" />
+                            </div>
+                            <div className="flex-1">
+                              <span className="font-bold text-indigo-950 text-xs block">Produtos com alta demanda</span>
+                              <p className="text-xs text-indigo-800">{p.name} registrou {p.quantity} unidades vendidas recentemente.</p>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Sem vendas */}
+                        {noSalesAlerts.slice(0, 3).map(p => (
+                          <div key={p.id} className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center gap-3 opacity-80">
+                            <div className="size-8 rounded-full bg-zinc-150 text-zinc-500 grid place-items-center shrink-0">
+                              <Package className="size-4" />
+                            </div>
+                            <div className="flex-1">
+                              <span className="font-bold text-zinc-700 text-xs block">Produtos sem vendas</span>
+                              <p className="text-xs text-zinc-500">{p.name} ainda não registrou vendas no histórico de transações.</p>
+                            </div>
+                          </div>
+                        ))}
+
+                        {outOfStockAlerts.length === 0 && lowStockAlerts.length === 0 && highDemandAlerts.length === 0 && noSalesAlerts.length === 0 && (
+                          <div className="text-center py-12 text-zinc-400 text-xs">Nenhum alerta pendente no momento. Tudo operando normalmente!</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Toast Notification */}
       {toast && (
