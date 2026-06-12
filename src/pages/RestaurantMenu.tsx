@@ -580,9 +580,7 @@ export default function RestaurantMenu() {
   };
 
   const deliveryFee = getDeliveryFee();
-  const tax = subtotal * 0.0875;
-  const tip = subtotal * 0.18;
-  const total = discountedTotal + tax + tip + deliveryFee;
+  const total = discountedTotal + deliveryFee;
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   useEffect(() => {
