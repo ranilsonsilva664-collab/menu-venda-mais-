@@ -68,7 +68,6 @@ export type MenuItem = {
   newBadge?: boolean;
   recommendedBadge?: boolean;
   limitedOfferBadge?: boolean;
-  externalLinkEnabled?: boolean;
   externalLinkUrl?: string;
 };
 
@@ -411,6 +410,8 @@ export default function RestaurantMenu() {
   const [closeTime, setCloseTime] = useState("");
   const [storeType, setStoreType] = useState<"delivery" | "appointment" | "budget">("delivery");
   const [budgetQuantity, setBudgetQuantity] = useState<number>(1);
+  const [comprarButtonEnabled, setComprarButtonEnabled] = useState(false);
+  const [comprarButtonText, setComprarButtonText] = useState("Comprar");
   const [locationAddress, setLocationAddress] = useState("");
   const [showLocationMap, setShowLocationMap] = useState(false);
   const [enableInventory, setEnableInventory] = useState(false);
@@ -542,6 +543,8 @@ export default function RestaurantMenu() {
           if (data.locationAddress) setLocationAddress(data.locationAddress);
           if (data.showLocationMap !== undefined) setShowLocationMap(data.showLocationMap);
           if (data.enableInventory !== undefined) setEnableInventory(data.enableInventory);
+          if (data.comprarButtonEnabled !== undefined) setComprarButtonEnabled(data.comprarButtonEnabled);
+          if (data.comprarButtonText !== undefined) setComprarButtonText(data.comprarButtonText);
         } else {
           // If restaurant not found, maybe show a 404 or default
           console.warn("Restaurant not found");
@@ -844,6 +847,27 @@ export default function RestaurantMenu() {
     setSelectedItem(null);
   };
 
+  const buyDirectViaWhatsApp = (item: MenuItem, quantity: number = 1, notes: string = "") => {
+    const phone = whatsappNumber.replace(/\D/g, "");
+    if (!phone) {
+      setToast("Configure o número do WhatsApp no painel admin");
+      return;
+    }
+    const lines: string[] = [];
+    lines.push(`Olá! Gostaria de fazer o pedido do seguinte item:`);
+    lines.push("");
+    lines.push(`Produto: ${item.name}`);
+    lines.push(`Quantidade: ${quantity}`);
+    lines.push(`Preço: ${formatCurrency(item.price * quantity)}`);
+    if (notes.trim()) {
+      lines.push("");
+      lines.push(`Observações: ${notes}`);
+    }
+    const message = lines.join("\n");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
   const isStoreOpen = () => {
     if (!openTime || !closeTime) return true;
     
@@ -1016,7 +1040,6 @@ export default function RestaurantMenu() {
     if (newItem.newBadge !== undefined) item.newBadge = newItem.newBadge;
     if (newItem.recommendedBadge !== undefined) item.recommendedBadge = newItem.recommendedBadge;
     if (newItem.limitedOfferBadge !== undefined) item.limitedOfferBadge = newItem.limitedOfferBadge;
-    if (newItem.externalLinkEnabled !== undefined) item.externalLinkEnabled = newItem.externalLinkEnabled;
     if (newItem.externalLinkUrl !== undefined) item.externalLinkUrl = newItem.externalLinkUrl;
 
     setMenu((prev) => [...prev, item]);
@@ -1573,16 +1596,29 @@ export default function RestaurantMenu() {
                               {item.calories && <span>{item.calories} cal</span>}
                             </div>
                           )}
-                          {item.externalLinkEnabled && item.externalLinkUrl && (
-                            <a
-                              href={item.externalLinkUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="mt-3 w-full h-9 rounded-xl bg-[var(--theme-color)] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition hover:opacity-90 shadow-sm relative z-20"
-                            >
-                              Comprar
-                            </a>
+                          {comprarButtonEnabled && (
+                            item.externalLinkUrl ? (
+                              <a
+                                href={item.externalLinkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-3 w-full h-9 rounded-xl bg-[var(--theme-color)] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition hover:opacity-90 shadow-sm relative z-20"
+                              >
+                                {comprarButtonText}
+                              </a>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  buyDirectViaWhatsApp(item);
+                                }}
+                                className="mt-3 w-full h-9 rounded-xl bg-[var(--theme-color)] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition hover:opacity-90 shadow-sm relative z-20"
+                              >
+                                {comprarButtonText}
+                              </button>
+                            )
                           )}
                         </div>
                       </article>
@@ -2052,6 +2088,34 @@ export default function RestaurantMenu() {
                   </label>
                 </div>
               </div>
+
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={comprarButtonEnabled}
+                    onChange={(e) => setComprarButtonEnabled(e.target.checked)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 size-4"
+                  />
+                  <span className="text-sm font-semibold text-zinc-700 font-medium">Ativar Botão Adicional de Compra Direta</span>
+                </label>
+                {comprarButtonEnabled && (
+                  <div className="pt-1">
+                    <label className="text-xs font-semibold text-zinc-600 mb-1 block">Rótulo/Texto do Botão</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Comprar, Fazer Pedido, Adquirir"
+                      value={comprarButtonText}
+                      onChange={(e) => setComprarButtonText(e.target.value)}
+                      className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/25"
+                    />
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      Este botão aparecerá no rodapé de cada produto. Se o produto tiver um link próprio cadastrado, o botão redirecionará para ele. Caso contrário, abrirá o WhatsApp para compra direta do item.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="text-sm font-medium mb-1 block">Nome do Negócio</label>
                 <input
@@ -2287,7 +2351,9 @@ export default function RestaurantMenu() {
                         closeTime,
                         storeType,
                         locationAddress,
-                        showLocationMap
+                        showLocationMap,
+                        comprarButtonEnabled,
+                        comprarButtonText
                       }, { merge: true });
                       setToast("Configurações salvas!");
                     } catch (e: any) {
@@ -2815,31 +2881,18 @@ export default function RestaurantMenu() {
                 </div>
               </div>
 
-              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!editingItem.externalLinkEnabled}
-                    onChange={(e) => setEditingItem({ ...editingItem, externalLinkEnabled: e.target.checked })}
-                    className="rounded text-amber-500 focus:ring-amber-500 size-4"
-                  />
-                  <span className="text-sm font-semibold text-zinc-700">Ativar Botão "Comprar" com Link Externo</span>
-                </label>
-                {editingItem.externalLinkEnabled && (
-                  <div className="pt-2">
-                    <label className="text-xs font-semibold text-zinc-600 mb-1 block">URL do Link de Compra</label>
-                    <input
-                      type="url"
-                      placeholder="https://exemplo.com/checkout"
-                      value={editingItem.externalLinkUrl || ""}
-                      onChange={(e) => setEditingItem({ ...editingItem, externalLinkUrl: e.target.value })}
-                      className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-                    />
-                    <p className="text-[11px] text-zinc-500 mt-1">
-                      O botão "Comprar" no cardápio irá redirecionar o cliente para esta URL.
-                    </p>
-                  </div>
-                )}
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
+                <label className="text-sm font-semibold text-zinc-700 mb-1 block">Link de Redirecionamento (Opcional)</label>
+                <input
+                  type="url"
+                  placeholder="https://exemplo.com/checkout"
+                  value={editingItem.externalLinkUrl || ""}
+                  onChange={(e) => setEditingItem({ ...editingItem, externalLinkUrl: e.target.value })}
+                  className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1.5">
+                  Se preenchido, o botão adicional de compra direta irá redirecionar o cliente para esta URL. Se deixado em branco, o botão enviará os dados do produto diretamente para o WhatsApp.
+                </p>
               </div>
 
               {/* Multi-image editor */}
@@ -3087,31 +3140,18 @@ export default function RestaurantMenu() {
                 </div>
               </div>
 
-              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!newItem.externalLinkEnabled}
-                    onChange={(e) => setNewItem({ ...newItem, externalLinkEnabled: e.target.checked })}
-                    className="rounded text-amber-500 focus:ring-amber-500 size-4"
-                  />
-                  <span className="text-sm font-semibold text-zinc-700">Ativar Botão "Comprar" com Link Externo</span>
-                </label>
-                {newItem.externalLinkEnabled && (
-                  <div className="pt-2">
-                    <label className="text-xs font-semibold text-zinc-600 mb-1 block">URL do Link de Compra</label>
-                    <input
-                      type="url"
-                      placeholder="https://exemplo.com/checkout"
-                      value={newItem.externalLinkUrl || ""}
-                      onChange={(e) => setNewItem({ ...newItem, externalLinkUrl: e.target.value })}
-                      className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/25"
-                    />
-                    <p className="text-[11px] text-zinc-500 mt-1">
-                      O botão "Comprar" no cardápio irá redirecionar o cliente para esta URL.
-                    </p>
-                  </div>
-                )}
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
+                <label className="text-sm font-semibold text-zinc-700 mb-1 block">Link de Redirecionamento (Opcional)</label>
+                <input
+                  type="url"
+                  placeholder="https://exemplo.com/checkout"
+                  value={newItem.externalLinkUrl || ""}
+                  onChange={(e) => setNewItem({ ...newItem, externalLinkUrl: e.target.value })}
+                  className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+                />
+                <p className="text-[11px] text-zinc-500 mt-1.5">
+                  Se preenchido, o botão adicional de compra direta irá redirecionar o cliente para esta URL. Se deixado em branco, o botão enviará os dados do produto diretamente para o WhatsApp.
+                </p>
               </div>
 
               {/* Multi-image upload for new item */}
@@ -3425,15 +3465,29 @@ export default function RestaurantMenu() {
                   : (storeType === "budget" ? "Solicitar Orçamento" : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"))}
               </button>
 
-              {selectedItem.externalLinkEnabled && selectedItem.externalLinkUrl && (
-                <a
-                  href={selectedItem.externalLinkUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 w-full h-12 rounded-2xl bg-[var(--theme-color)] text-white font-semibold flex items-center justify-center gap-1.5 transition hover:opacity-95 shadow-sm"
-                >
-                  Comprar
-                </a>
+              {comprarButtonEnabled && (
+                selectedItem.externalLinkUrl ? (
+                  <a
+                    href={selectedItem.externalLinkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 w-full h-12 rounded-2xl bg-[var(--theme-color)] text-white font-semibold flex items-center justify-center gap-1.5 transition hover:opacity-95 shadow-sm"
+                  >
+                    {comprarButtonText}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const notes = (document.getElementById("notes") as HTMLTextAreaElement)?.value || "";
+                      buyDirectViaWhatsApp(selectedItem, storeType === "budget" ? budgetQuantity : 1, notes);
+                      setSelectedItem(null);
+                    }}
+                    className="mt-3 w-full h-12 rounded-2xl bg-[var(--theme-color)] text-white font-semibold flex items-center justify-center gap-1.5 transition hover:opacity-95 shadow-sm"
+                  >
+                    {comprarButtonText}
+                  </button>
+                )
               )}
             </div>
           </div>
