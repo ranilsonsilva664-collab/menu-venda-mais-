@@ -42,6 +42,7 @@ import {
   FileText,
   AlertTriangle,
   TrendingUp,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { compressImage } from "../utils/imageCompressor";
@@ -69,6 +70,7 @@ export type MenuItem = {
   recommendedBadge?: boolean;
   limitedOfferBadge?: boolean;
   externalLinkUrl?: string;
+  relatedProductIds?: string[];
 };
 
 type CartItem = {
@@ -380,6 +382,7 @@ export default function RestaurantMenu() {
   const [dietaryFilters, setDietaryFilters] = useState<Dietary[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [showUpsell, setShowUpsell] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(["m7", "m12"]);
@@ -1162,6 +1165,7 @@ export default function RestaurantMenu() {
     if (newItem.recommendedBadge !== undefined) item.recommendedBadge = newItem.recommendedBadge;
     if (newItem.limitedOfferBadge !== undefined) item.limitedOfferBadge = newItem.limitedOfferBadge;
     if (newItem.externalLinkUrl !== undefined) item.externalLinkUrl = newItem.externalLinkUrl;
+    if (newItem.relatedProductIds && newItem.relatedProductIds.length > 0) item.relatedProductIds = newItem.relatedProductIds;
 
     setMenu((prev) => [...prev, item]);
     try {
@@ -1571,7 +1575,7 @@ export default function RestaurantMenu() {
                           )}
                         >
                           <button
-                            onClick={() => setSelectedItem(item)}
+                            onClick={() => { setShowUpsell(false); setSelectedItem(item); }}
                             className="absolute inset-0 z-10"
                             aria-label={`Ver ${item.name}`}
                           />
@@ -1676,9 +1680,15 @@ export default function RestaurantMenu() {
                                    return;
                                  }
                                  if (storeType === "budget") {
+                                   setShowUpsell(false);
                                    setSelectedItem(item);
                                  } else {
                                    addToCart(item);
+                                   const hasRelated = (item.relatedProductIds || []).length > 0;
+                                   if (hasRelated) {
+                                     setShowUpsell(true);
+                                     setSelectedItem(item);
+                                   }
                                  }
                                }}
                                disabled={isEsgotado}
@@ -3089,6 +3099,57 @@ export default function RestaurantMenu() {
                 </p>
               </div>
 
+              {/* Produtos Relacionados (Upsell) */}
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200/60">
+                <label className="text-sm font-semibold text-zinc-700 mb-1 flex items-center gap-1.5">
+                  <Sparkles className="size-4 text-amber-500" />
+                  Produtos Relacionados (Upsell)
+                </label>
+                <p className="text-[11px] text-zinc-500 mb-3">
+                  Selecione produtos para sugerir ao cliente quando ele adicionar este item ao pedido. Isso aumenta o ticket médio!
+                </p>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                  {menu.filter(m => m.id !== editingItem.id).map(m => {
+                    const isSelected = (editingItem.relatedProductIds || []).includes(m.id);
+                    return (
+                      <label
+                        key={m.id}
+                        className={cn(
+                          "flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border",
+                          isSelected
+                            ? "bg-white border-amber-300 shadow-sm"
+                            : "bg-white/50 border-transparent hover:bg-white hover:border-zinc-200"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const current = editingItem.relatedProductIds || [];
+                            const updated = isSelected
+                              ? current.filter(id => id !== m.id)
+                              : [...current, m.id];
+                            setEditingItem({ ...editingItem, relatedProductIds: updated });
+                          }}
+                          className="accent-amber-500 size-4 shrink-0"
+                        />
+                        <img src={m.images[0] || PLACEHOLDER} className="size-8 rounded-lg object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-zinc-800 truncate">{m.name}</div>
+                          <div className="text-[10px] text-zinc-500">{m.category}</div>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-700 shrink-0">R${m.price.toFixed(2).replace(".", ",")}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {(editingItem.relatedProductIds || []).length > 0 && (
+                  <div className="mt-2 text-[10px] text-amber-700 font-semibold">
+                    {(editingItem.relatedProductIds || []).length} produto(s) selecionado(s) para upsell
+                  </div>
+                )}
+              </div>
+
               {/* Multi-image editor */}
               <div>
                 <label className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -3348,6 +3409,57 @@ export default function RestaurantMenu() {
                 </p>
               </div>
 
+              {/* Produtos Relacionados (Upsell) - Add form */}
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200/60">
+                <label className="text-sm font-semibold text-zinc-700 mb-1 flex items-center gap-1.5">
+                  <Sparkles className="size-4 text-amber-500" />
+                  Produtos Relacionados (Upsell)
+                </label>
+                <p className="text-[11px] text-zinc-500 mb-3">
+                  Selecione produtos para sugerir ao cliente quando ele adicionar este item ao pedido.
+                </p>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                  {menu.map(m => {
+                    const isSelected = (newItem.relatedProductIds || []).includes(m.id);
+                    return (
+                      <label
+                        key={m.id}
+                        className={cn(
+                          "flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border",
+                          isSelected
+                            ? "bg-white border-amber-300 shadow-sm"
+                            : "bg-white/50 border-transparent hover:bg-white hover:border-zinc-200"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const current = newItem.relatedProductIds || [];
+                            const updated = isSelected
+                              ? current.filter(id => id !== m.id)
+                              : [...current, m.id];
+                            setNewItem({ ...newItem, relatedProductIds: updated });
+                          }}
+                          className="accent-amber-500 size-4 shrink-0"
+                        />
+                        <img src={m.images[0] || PLACEHOLDER} className="size-8 rounded-lg object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-zinc-800 truncate">{m.name}</div>
+                          <div className="text-[10px] text-zinc-500">{m.category}</div>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-700 shrink-0">R${m.price.toFixed(2).replace(".", ",")}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {(newItem.relatedProductIds || []).length > 0 && (
+                  <div className="mt-2 text-[10px] text-amber-700 font-semibold">
+                    {(newItem.relatedProductIds || []).length} produto(s) selecionado(s) para upsell
+                  </div>
+                )}
+              </div>
+
               {/* Multi-image upload for new item */}
               <div>
                 <label className="text-sm font-medium mb-2 block">
@@ -3500,7 +3612,7 @@ export default function RestaurantMenu() {
                 )}
               </div>
               <button
-                onClick={() => setSelectedItem(null)}
+                onClick={() => { setSelectedItem(null); setShowUpsell(false); }}
                 className="absolute top-4 right-4 bg-white/90 backdrop-blur p-2 rounded-full z-10"
               >
                 <X />
@@ -3644,22 +3756,29 @@ export default function RestaurantMenu() {
                     requestBudget(selectedItem, budgetQuantity, notes);
                   } else {
                     addToCart(selectedItem, { notes });
-                    setSelectedItem(null);
+                    const hasRelated = (selectedItem.relatedProductIds || []).length > 0;
+                    if (hasRelated) {
+                      setShowUpsell(true);
+                    } else {
+                      setSelectedItem(null);
+                    }
                   }
                 }}
                 className={cn(
                   "mt-4 w-full h-12 rounded-2xl text-white font-semibold transition",
                   enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0
                     ? "bg-zinc-200 text-zinc-400 cursor-not-allowed"
-                    : "bg-zinc-900 hover:bg-zinc-800"
+                    : showUpsell ? "bg-emerald-600 hover:bg-emerald-700" : "bg-zinc-900 hover:bg-zinc-800"
                 )}
               >
                 {enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0 
                   ? "Produto Esgotado" 
-                  : (storeType === "budget" ? "Solicitar Orçamento" : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"))}
+                  : showUpsell
+                    ? "✓ Adicionado ao Pedido"
+                    : (storeType === "budget" ? "Solicitar Orçamento" : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"))}
               </button>
 
-              {comprarButtonEnabled && (
+              {comprarButtonEnabled && !showUpsell && (
                 selectedItem.externalLinkUrl ? (
                   <a
                     href={selectedItem.externalLinkUrl}
@@ -3676,12 +3795,78 @@ export default function RestaurantMenu() {
                       const notes = (document.getElementById("notes") as HTMLTextAreaElement)?.value || "";
                       buyDirectViaWhatsApp(selectedItem, storeType === "budget" ? budgetQuantity : 1, notes);
                       setSelectedItem(null);
+                      setShowUpsell(false);
                     }}
                     className="mt-3 w-full h-12 rounded-2xl bg-[var(--theme-color)] text-white font-semibold flex items-center justify-center gap-1.5 transition hover:opacity-95 shadow-sm"
                   >
                     {comprarButtonText}
                   </button>
                 )
+              )}
+
+              {/* Upsell - "Adicione também" */}
+              {showUpsell && selectedItem.relatedProductIds && selectedItem.relatedProductIds.length > 0 && (
+                <div className="mt-5 animate-in slide-in-from-bottom-4 duration-300">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
+                      <Sparkles className="size-3.5" />
+                      Adicione também
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent" />
+                  </div>
+                  <div className="space-y-2">
+                    {selectedItem.relatedProductIds
+                      .map(id => menu.find(m => m.id === id))
+                      .filter((m): m is MenuItem => !!m)
+                      .map(related => {
+                        const isEsgotado = enableInventory && related.stockQuantity !== undefined && related.stockQuantity <= 0;
+                        return (
+                          <div
+                            key={related.id}
+                            className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50/80 to-orange-50/50 border border-amber-100 rounded-2xl hover:shadow-md transition-all group"
+                          >
+                            <img
+                              src={related.images[0] || PLACEHOLDER}
+                              className="size-14 rounded-xl object-cover shrink-0 shadow-sm"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-zinc-900 truncate">{related.name}</div>
+                              <div className="text-xs text-zinc-500 truncate">{related.description}</div>
+                              <div className="text-sm font-bold text-emerald-700 mt-0.5">
+                                R${related.price.toFixed(2).replace(".", ",")}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={isEsgotado}
+                              onClick={() => {
+                                addToCart(related);
+                              }}
+                              className={cn(
+                                "shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1",
+                                isEsgotado
+                                  ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                                  : "bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 shadow-sm"
+                              )}
+                            >
+                              <Plus className="size-3.5" />
+                              Adicionar
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedItem(null);
+                      setShowUpsell(false);
+                    }}
+                    className="mt-4 w-full h-10 rounded-2xl border border-zinc-200 text-zinc-600 text-sm font-medium hover:bg-zinc-50 transition"
+                  >
+                    Fechar e continuar comprando
+                  </button>
+                </div>
               )}
             </div>
           </div>
