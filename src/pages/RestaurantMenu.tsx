@@ -407,7 +407,8 @@ export default function RestaurantMenu() {
   const [headerLogo, setHeaderLogo] = useState("");
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
-  const [storeType, setStoreType] = useState<"delivery" | "appointment">("delivery");
+  const [storeType, setStoreType] = useState<"delivery" | "appointment" | "budget">("delivery");
+  const [budgetQuantity, setBudgetQuantity] = useState<number>(1);
   const [locationAddress, setLocationAddress] = useState("");
   const [showLocationMap, setShowLocationMap] = useState(false);
   const [enableInventory, setEnableInventory] = useState(false);
@@ -587,8 +588,11 @@ export default function RestaurantMenu() {
     }
   }, [toast]);
 
-  // Reset gallery when opening a different item
-  useEffect(() => { setGalleryIndex(0); }, [selectedItem]);
+  // Reset gallery and budget quantity when opening a different item
+  useEffect(() => {
+    setGalleryIndex(0);
+    setBudgetQuantity(1);
+  }, [selectedItem]);
 
   // Public functions
   const addToCart = (item: MenuItem, opts?: { notes?: string; options?: string[] }) => {
@@ -815,6 +819,27 @@ export default function RestaurantMenu() {
 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
+  };
+
+  const requestBudget = (item: MenuItem, quantity: number, notes: string) => {
+    const phone = whatsappNumber.replace(/\D/g, "");
+    if (!phone) {
+      setToast("Configure o número do WhatsApp no painel admin");
+      return;
+    }
+    const lines: string[] = [];
+    lines.push("Olá, gostaria de solicitar um orçamento.");
+    lines.push("");
+    lines.push(`Produto: ${item.name}`);
+    lines.push(`Quantidade: ${quantity}`);
+    if (notes.trim()) {
+      lines.push("");
+      lines.push(`Observações: ${notes}`);
+    }
+    const message = lines.join("\n");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+    setSelectedItem(null);
   };
 
   const isStoreOpen = () => {
@@ -1115,18 +1140,20 @@ export default function RestaurantMenu() {
                   </button>
                 </>
               )}
-              <button
-                onClick={() => setShowCart(true)}
-                className="relative h-10 pl-3 pr-4 rounded-full bg-[var(--theme-color)] text-white text-sm font-medium flex items-center gap-2 transition hover:opacity-90"
-              >
-                {storeType === "appointment" ? <Calendar className="size-4" /> : <ShoppingBag className="size-4" />}
-                <span className="hidden sm:inline">{storeType === "appointment" ? "Agendamentos" : "Pedido"}</span>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 grid place-items-center rounded-full bg-[var(--theme-color)] text-[11px] font-bold border-2 border-white">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
+               {storeType !== "budget" && (
+                <button
+                  onClick={() => setShowCart(true)}
+                  className="relative h-10 pl-3 pr-4 rounded-full bg-[var(--theme-color)] text-white text-sm font-medium flex items-center gap-2 transition hover:opacity-90"
+                >
+                  {storeType === "appointment" ? <Calendar className="size-4" /> : <ShoppingBag className="size-4" />}
+                  <span className="hidden sm:inline">{storeType === "appointment" ? "Agendamentos" : "Pedido"}</span>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 grid place-items-center rounded-full bg-[var(--theme-color)] text-[11px] font-bold border-2 border-white">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
@@ -1367,7 +1394,10 @@ export default function RestaurantMenu() {
       </section>
 
       {/* Main Menu Content */}
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-10 grid lg:grid-cols-[1fr_380px] gap-10 items-start">
+      <main className={cn(
+        "mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-10 items-start",
+        storeType === "budget" ? "block" : "grid lg:grid-cols-[1fr_380px] gap-10"
+      )}>
         <div className="min-w-0">
           {grouped.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-zinc-200">
@@ -1497,17 +1527,32 @@ export default function RestaurantMenu() {
                                    setToast("Produto indisponível no estoque");
                                    return;
                                  }
-                                 addToCart(item);
+                                 if (storeType === "budget") {
+                                   setSelectedItem(item);
+                                 } else {
+                                   addToCart(item);
+                                 }
                                }}
                                disabled={isEsgotado}
+                               title={storeType === "budget" ? "Solicitar Orçamento" : undefined}
                                className={cn(
-                                 "relative z-20 size-8 grid place-items-center rounded-full transition",
-                                 isEsgotado 
-                                   ? "bg-zinc-200 text-zinc-400 cursor-not-allowed" 
-                                   : "bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95"
+                                 "relative z-20 transition flex items-center justify-center",
+                                 storeType === "budget"
+                                   ? "px-3 py-1.5 rounded-full text-xs font-semibold bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 gap-1 shrink-0"
+                                   : "size-8 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95",
+                                 isEsgotado && "bg-zinc-200 text-zinc-400 cursor-not-allowed"
                                )}
                              >
-                               {isEsgotado ? <Lock className="size-3.5" /> : <Plus className="size-4" />}
+                               {isEsgotado ? (
+                                 <Lock className="size-3.5" />
+                               ) : storeType === "budget" ? (
+                                 <>
+                                   <FileText className="size-3.5" />
+                                   <span>Orçamento</span>
+                                 </>
+                               ) : (
+                                 <Plus className="size-4" />
+                               )}
                              </button>
                           </div>
                           <p className="mt-1 text-sm text-zinc-600 line-clamp-2 leading-relaxed subtitle-font">
@@ -1556,7 +1601,8 @@ export default function RestaurantMenu() {
         </div>
 
         {/* Order Sidebar */}
-        <aside className="hidden lg:block sticky top-[128px]">
+        {storeType !== "budget" && (
+          <aside className="hidden lg:block sticky top-[128px]">
           <div className="bg-white rounded-[1.75rem] border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-zinc-200">
               <div className="flex items-center justify-between">
@@ -1653,6 +1699,7 @@ export default function RestaurantMenu() {
             )}
           </div>
         </aside>
+        )}
       </main>
 
       {/* Admin Login Modal */}
@@ -1972,16 +2019,21 @@ export default function RestaurantMenu() {
             <div className="p-6 space-y-5 overflow-y-auto flex-1">
               <div>
                 <label className="text-sm font-medium mb-2 block">Tipo de Negócio</label>
-                <div className="flex gap-2">
-                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition", storeType === "delivery" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
+                 <div className="flex gap-2">
+                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition text-center", storeType === "delivery" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
                     <input type="radio" name="storeType" className="hidden" checked={storeType === "delivery"} onChange={() => setStoreType("delivery")} />
                     <ShoppingBag className="size-5" />
-                    Delivery / Produtos
+                    <span>Delivery / Produtos</span>
                   </label>
-                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition", storeType === "appointment" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
+                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition text-center", storeType === "appointment" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
                     <input type="radio" name="storeType" className="hidden" checked={storeType === "appointment"} onChange={() => setStoreType("appointment")} />
                     <Calendar className="size-5" />
-                    Serviços / Agendamento
+                    <span>Serviços / Agendamento</span>
+                  </label>
+                  <label className={cn("flex-1 cursor-pointer border rounded-xl p-3 flex flex-col items-center gap-2 text-sm font-medium transition text-center", storeType === "budget" ? "border-emerald-500 bg-emerald-50/50 text-emerald-700" : "hover:bg-zinc-50")}>
+                    <input type="radio" name="storeType" className="hidden" checked={storeType === "budget"} onChange={() => setStoreType("budget")} />
+                    <FileText className="size-5" />
+                    <span>Orçamentos</span>
                   </label>
                 </div>
               </div>
@@ -3245,18 +3297,52 @@ export default function RestaurantMenu() {
               )}
 
               <div className="my-4 text-2xl font-bold">R${selectedItem.price}</div>
+
+              {storeType === "budget" && (
+                <div className="flex items-center justify-between mb-4 bg-zinc-50 p-3 rounded-2xl border border-zinc-200">
+                  <span className="text-sm font-medium text-zinc-700">Quantidade:</span>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => setBudgetQuantity(Math.max(1, budgetQuantity - 1))}
+                      className="size-8 rounded-full border bg-white flex items-center justify-center font-bold text-zinc-600 hover:bg-zinc-50"
+                    >
+                      -
+                    </button>
+                    <span className="font-semibold text-zinc-800 text-base w-6 text-center">{budgetQuantity}</span>
+                    <button 
+                      type="button"
+                      onClick={() => setBudgetQuantity(budgetQuantity + 1)}
+                      className="size-8 rounded-full border bg-white flex items-center justify-center font-bold text-zinc-600 hover:bg-zinc-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <textarea
                 id="notes"
                 disabled={enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0}
-                placeholder={enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0 ? "Produto indisponível" : "Observações para a cozinha"}
-                className="w-full border rounded-2xl p-4 h-16 text-sm"
+                placeholder={
+                  storeType === "budget"
+                    ? "Observações para o orçamento (ex: dimensões, cores, customizações...)"
+                    : enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0
+                      ? "Produto indisponível"
+                      : "Observações para a cozinha"
+                }
+                className="w-full border rounded-2xl p-4 h-20 text-sm"
               />
               <button
                 disabled={enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0}
                 onClick={() => {
-                  const notes = (document.getElementById("notes") as HTMLTextAreaElement)?.value;
-                  addToCart(selectedItem, { notes });
-                  setSelectedItem(null);
+                  const notes = (document.getElementById("notes") as HTMLTextAreaElement)?.value || "";
+                  if (storeType === "budget") {
+                    requestBudget(selectedItem, budgetQuantity, notes);
+                  } else {
+                    addToCart(selectedItem, { notes });
+                    setSelectedItem(null);
+                  }
                 }}
                 className={cn(
                   "mt-4 w-full h-12 rounded-2xl text-white font-semibold transition",
@@ -3267,7 +3353,7 @@ export default function RestaurantMenu() {
               >
                 {enableInventory && selectedItem.stockQuantity !== undefined && selectedItem.stockQuantity <= 0 
                   ? "Produto Esgotado" 
-                  : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido")}
+                  : (storeType === "budget" ? "Solicitar Orçamento" : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"))}
               </button>
             </div>
           </div>
