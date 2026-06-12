@@ -1821,7 +1821,7 @@ export default function RestaurantMenu() {
             <div className="w-full h-64 sm:h-80 rounded-3xl overflow-hidden border-2 border-zinc-200 shadow-sm relative z-0">
               <iframe
                 className="w-full h-full border-0"
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(locationAddress)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(locationAddress)}&t=&z=15&ie=UTF8&iwloc=B&output=embed`}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
