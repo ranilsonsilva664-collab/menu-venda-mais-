@@ -68,6 +68,8 @@ export type MenuItem = {
   newBadge?: boolean;
   recommendedBadge?: boolean;
   limitedOfferBadge?: boolean;
+  externalLinkEnabled?: boolean;
+  externalLinkUrl?: string;
 };
 
 type CartItem = {
@@ -1014,6 +1016,8 @@ export default function RestaurantMenu() {
     if (newItem.newBadge !== undefined) item.newBadge = newItem.newBadge;
     if (newItem.recommendedBadge !== undefined) item.recommendedBadge = newItem.recommendedBadge;
     if (newItem.limitedOfferBadge !== undefined) item.limitedOfferBadge = newItem.limitedOfferBadge;
+    if (newItem.externalLinkEnabled !== undefined) item.externalLinkEnabled = newItem.externalLinkEnabled;
+    if (newItem.externalLinkUrl !== undefined) item.externalLinkUrl = newItem.externalLinkUrl;
 
     setMenu((prev) => [...prev, item]);
     try {
@@ -1568,6 +1572,17 @@ export default function RestaurantMenu() {
                               {item.prepTime && item.calories && <span>•</span>}
                               {item.calories && <span>{item.calories} cal</span>}
                             </div>
+                          )}
+                          {item.externalLinkEnabled && item.externalLinkUrl && (
+                            <a
+                              href={item.externalLinkUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-3 w-full h-9 rounded-xl bg-[var(--theme-color)] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition hover:opacity-90 shadow-sm relative z-20"
+                            >
+                              Comprar
+                            </a>
                           )}
                         </div>
                       </article>
@@ -2800,6 +2815,33 @@ export default function RestaurantMenu() {
                 </div>
               </div>
 
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!editingItem.externalLinkEnabled}
+                    onChange={(e) => setEditingItem({ ...editingItem, externalLinkEnabled: e.target.checked })}
+                    className="rounded text-amber-500 focus:ring-amber-500 size-4"
+                  />
+                  <span className="text-sm font-semibold text-zinc-700">Ativar Botão "Comprar" com Link Externo</span>
+                </label>
+                {editingItem.externalLinkEnabled && (
+                  <div className="pt-2">
+                    <label className="text-xs font-semibold text-zinc-600 mb-1 block">URL do Link de Compra</label>
+                    <input
+                      type="url"
+                      placeholder="https://exemplo.com/checkout"
+                      value={editingItem.externalLinkUrl || ""}
+                      onChange={(e) => setEditingItem({ ...editingItem, externalLinkUrl: e.target.value })}
+                      className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+                    />
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      O botão "Comprar" no cardápio irá redirecionar o cliente para esta URL.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Multi-image editor */}
               <div>
                 <label className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -3043,6 +3085,33 @@ export default function RestaurantMenu() {
                     );
                   })}
                 </div>
+              </div>
+
+              <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!newItem.externalLinkEnabled}
+                    onChange={(e) => setNewItem({ ...newItem, externalLinkEnabled: e.target.checked })}
+                    className="rounded text-amber-500 focus:ring-amber-500 size-4"
+                  />
+                  <span className="text-sm font-semibold text-zinc-700">Ativar Botão "Comprar" com Link Externo</span>
+                </label>
+                {newItem.externalLinkEnabled && (
+                  <div className="pt-2">
+                    <label className="text-xs font-semibold text-zinc-600 mb-1 block">URL do Link de Compra</label>
+                    <input
+                      type="url"
+                      placeholder="https://exemplo.com/checkout"
+                      value={newItem.externalLinkUrl || ""}
+                      onChange={(e) => setNewItem({ ...newItem, externalLinkUrl: e.target.value })}
+                      className="w-full border h-10 rounded-xl px-3 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/25"
+                    />
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      O botão "Comprar" no cardápio irá redirecionar o cliente para esta URL.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Multi-image upload for new item */}
@@ -3355,6 +3424,17 @@ export default function RestaurantMenu() {
                   ? "Produto Esgotado" 
                   : (storeType === "budget" ? "Solicitar Orçamento" : (storeType === "appointment" ? "Adicionar" : "Adicionar ao Pedido"))}
               </button>
+
+              {selectedItem.externalLinkEnabled && selectedItem.externalLinkUrl && (
+                <a
+                  href={selectedItem.externalLinkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 w-full h-12 rounded-2xl bg-[var(--theme-color)] text-white font-semibold flex items-center justify-center gap-1.5 transition hover:opacity-95 shadow-sm"
+                >
+                  Comprar
+                </a>
+              )}
             </div>
           </div>
         </div>
