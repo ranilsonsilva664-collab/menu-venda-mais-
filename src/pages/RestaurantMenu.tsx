@@ -63,6 +63,11 @@ export type MenuItem = {
   stockQuantity?: number;
   costPrice?: number;
   minStockLimit?: number;
+  promoBadge?: boolean;
+  bestSellerBadge?: boolean;
+  newBadge?: boolean;
+  recommendedBadge?: boolean;
+  limitedOfferBadge?: boolean;
 };
 
 type CartItem = {
@@ -979,6 +984,11 @@ export default function RestaurantMenu() {
     if (newItem.stockQuantity !== undefined) item.stockQuantity = newItem.stockQuantity;
     if (newItem.costPrice !== undefined) item.costPrice = newItem.costPrice;
     if (newItem.minStockLimit !== undefined) item.minStockLimit = newItem.minStockLimit;
+    if (newItem.promoBadge !== undefined) item.promoBadge = newItem.promoBadge;
+    if (newItem.bestSellerBadge !== undefined) item.bestSellerBadge = newItem.bestSellerBadge;
+    if (newItem.newBadge !== undefined) item.newBadge = newItem.newBadge;
+    if (newItem.recommendedBadge !== undefined) item.recommendedBadge = newItem.recommendedBadge;
+    if (newItem.limitedOfferBadge !== undefined) item.limitedOfferBadge = newItem.limitedOfferBadge;
 
     setMenu((prev) => [...prev, item]);
     try {
@@ -1394,6 +1404,34 @@ export default function RestaurantMenu() {
                               className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                               loading="lazy"
                             />
+                            {/* Selos do Produto */}
+                            <div className="absolute top-3 left-3 z-20 flex flex-col gap-1 items-start pointer-events-none">
+                              {item.bestSellerBadge && (
+                                <span className="bg-amber-500 text-white text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow flex items-center gap-1 border border-amber-400">
+                                  <span>🔥</span> <span>Mais Vendido</span>
+                                </span>
+                              )}
+                              {item.promoBadge && (
+                                <span className="bg-red-500 text-white text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow flex items-center gap-1 border border-red-400">
+                                  <span>⚡</span> <span>Promoção</span>
+                                </span>
+                              )}
+                              {item.newBadge && (
+                                <span className="bg-blue-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow flex items-center gap-1 border border-blue-500">
+                                  <span>🆕</span> <span>Novo</span>
+                                </span>
+                              )}
+                              {item.recommendedBadge && (
+                                <span className="bg-emerald-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow flex items-center gap-1 border border-emerald-500">
+                                  <span>⭐</span> <span>Recomendado</span>
+                                </span>
+                              )}
+                              {item.limitedOfferBadge && (
+                                <span className="bg-purple-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow flex items-center gap-1 border border-purple-500">
+                                  <span>⏳</span> <span>Oferta Limitada</span>
+                                </span>
+                              )}
+                            </div>
                             {isEsgotado && (
                               <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center z-20">
                                 <span className="bg-red-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg border border-red-500">
@@ -2656,6 +2694,37 @@ export default function RestaurantMenu() {
               )}
 
               <div>
+                <label className="text-sm font-medium mb-2 block">Selos do Produto (Selecione um ou mais)</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: "bestSellerBadge", label: "🔥 Mais Vendido" },
+                    { key: "promoBadge", label: "⚡ Promoção" },
+                    { key: "newBadge", label: "🆕 Novo" },
+                    { key: "recommendedBadge", label: "⭐ Recomendado" },
+                    { key: "limitedOfferBadge", label: "⏳ Oferta Limitada" }
+                  ].map((badge) => {
+                    const key = badge.key as "bestSellerBadge" | "promoBadge" | "newBadge" | "recommendedBadge" | "limitedOfferBadge";
+                    const isActive = !!editingItem[key];
+                    return (
+                      <button
+                        key={badge.key}
+                        type="button"
+                        onClick={() => setEditingItem({ ...editingItem, [key]: !isActive })}
+                        className={cn(
+                          "px-3.5 py-1.5 rounded-full text-sm font-medium border flex items-center gap-1.5 transition-all duration-200",
+                          isActive
+                            ? "bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20"
+                            : "bg-white text-zinc-700 border-zinc-300 hover:border-zinc-400"
+                        )}
+                      >
+                        {badge.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <label className="text-sm font-medium mb-2 block">Restrições Alimentares</label>
                 <div className="flex flex-wrap gap-2">
                   {Object.keys(dietaryMeta).map((key) => {
@@ -2872,6 +2941,37 @@ export default function RestaurantMenu() {
               )}
 
               <div>
+                <label className="text-sm font-medium mb-2 block">Selos do Produto (Selecione um ou mais)</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: "bestSellerBadge", label: "🔥 Mais Vendido" },
+                    { key: "promoBadge", label: "⚡ Promoção" },
+                    { key: "newBadge", label: "🆕 Novo" },
+                    { key: "recommendedBadge", label: "⭐ Recomendado" },
+                    { key: "limitedOfferBadge", label: "⏳ Oferta Limitada" }
+                  ].map((badge) => {
+                    const key = badge.key as "bestSellerBadge" | "promoBadge" | "newBadge" | "recommendedBadge" | "limitedOfferBadge";
+                    const isActive = !!newItem[key];
+                    return (
+                      <button
+                        key={badge.key}
+                        type="button"
+                        onClick={() => setNewItem({ ...newItem, [key]: !isActive })}
+                        className={cn(
+                          "px-3.5 py-1.5 rounded-full text-sm font-medium border flex items-center gap-1.5 transition-all duration-200",
+                          isActive
+                            ? "bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20"
+                            : "bg-white text-zinc-700 border-zinc-300 hover:border-zinc-400"
+                        )}
+                      >
+                        {badge.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <div className="text-sm mb-2">Restrições</div>
                 <div className="flex flex-wrap gap-2">
                   {Object.keys(dietaryMeta).map((key) => {
@@ -3016,6 +3116,34 @@ export default function RestaurantMenu() {
                 src={selectedItem.images[galleryIndex] || PLACEHOLDER}
                 className="w-full h-full object-cover"
               />
+              {/* Selos do Produto no Modal de Detalhes */}
+              <div className="absolute top-4 left-4 z-10 flex flex-col gap-1 items-start pointer-events-none">
+                {selectedItem.bestSellerBadge && (
+                  <span className="bg-amber-500 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded shadow flex items-center gap-1 border border-amber-400">
+                    <span>🔥</span> <span>Mais Vendido</span>
+                  </span>
+                )}
+                {selectedItem.promoBadge && (
+                  <span className="bg-red-500 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded shadow flex items-center gap-1 border border-red-400">
+                    <span>⚡</span> <span>Promoção</span>
+                  </span>
+                )}
+                {selectedItem.newBadge && (
+                  <span className="bg-blue-600 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded shadow flex items-center gap-1 border border-blue-500">
+                    <span>🆕</span> <span>Novo</span>
+                  </span>
+                )}
+                {selectedItem.recommendedBadge && (
+                  <span className="bg-emerald-600 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded shadow flex items-center gap-1 border border-emerald-500">
+                    <span>⭐</span> <span>Recomendado</span>
+                  </span>
+                )}
+                {selectedItem.limitedOfferBadge && (
+                  <span className="bg-purple-600 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded shadow flex items-center gap-1 border border-purple-500">
+                    <span>⏳</span> <span>Oferta Limitada</span>
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => setSelectedItem(null)}
                 className="absolute top-4 right-4 bg-white/90 backdrop-blur p-2 rounded-full z-10"
