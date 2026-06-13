@@ -398,7 +398,7 @@ export const getEmbedUrl = (url: string) => {
   
   const igMatch = url.match(/(?:instagram\.com)\/(?:p|reel|tv)\/([a-zA-Z0-9_-]+)/);
   if (igMatch && igMatch[1]) {
-    return `https://www.instagram.com/p/${igMatch[1]}/embed`;
+    return `https://www.instagram.com/p/${igMatch[1]}/embed?hidecaption=true`;
   }
   
   const ttMatch = url.match(/(?:tiktok\.com)\/.*\/video\/(\d+)/);
@@ -3294,7 +3294,7 @@ export default function RestaurantMenu() {
                           }}
                           className="accent-amber-500 size-4 shrink-0"
                         />
-                        <img src={m.images[0] || PLACEHOLDER} className="size-8 rounded-lg object-cover shrink-0" />
+                        <MediaRenderer src={m.images[0] || PLACEHOLDER} className="size-8 rounded-lg object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-semibold text-zinc-800 truncate">{m.name}</div>
                           <div className="text-[10px] text-zinc-500">{m.category}</div>
@@ -3626,7 +3626,7 @@ export default function RestaurantMenu() {
                           }}
                           className="accent-amber-500 size-4 shrink-0"
                         />
-                        <img src={m.images[0] || PLACEHOLDER} className="size-8 rounded-lg object-cover shrink-0" />
+                        <MediaRenderer src={m.images[0] || PLACEHOLDER} className="size-8 rounded-lg object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-semibold text-zinc-800 truncate">{m.name}</div>
                           <div className="text-[10px] text-zinc-500">{m.category}</div>
