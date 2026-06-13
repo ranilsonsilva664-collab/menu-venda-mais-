@@ -50,9 +50,9 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col items-center justify-center p-4">
-      <h1 className="text-4xl font-bold text-zinc-900 mb-4 text-center">Crie seu Menu Digital</h1>
+      <h1 className="text-4xl font-bold text-zinc-900 mb-4 text-center">Crie seu Mini Site Pro</h1>
       <p className="text-zinc-600 mb-8 text-center max-w-md">
-        Seja bem-vindo à nossa plataforma! Cadastre seu negócio, comece com um menu digital de exemplo lindo e receba pedidos no WhatsApp.
+        Seja bem-vindo à nossa plataforma! Cadastre seu negócio, comece com um mini site de exemplo lindo e receba pedidos no WhatsApp.
       </p>
       
       <form onSubmit={createRestaurant} className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-amber-100">
@@ -104,14 +104,14 @@ export default function Landing() {
               onChange={(e) => setPassword(e.target.value)}
               type="password" 
               className="w-full h-10 px-3 rounded-lg border border-zinc-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition" 
-              placeholder="Crie uma senha para editar seu menu digital" 
+              placeholder="Crie uma senha para editar seu mini site" 
             />
           </div>
           <button 
             type="submit"
             disabled={loading}
           >
-            {loading ? "Criando loja..." : "Criar Meu Menu Digital"}
+            {loading ? "Criando loja..." : "Criar Meu Mini Site Pro"}
           </button>
         </div>
       </form>

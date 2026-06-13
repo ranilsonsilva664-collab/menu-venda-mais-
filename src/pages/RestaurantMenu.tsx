@@ -638,7 +638,7 @@ export default function RestaurantMenu() {
         if (restDoc.exists()) {
           const data = restDoc.data();
           setRestaurantName(data.name || "Restaurante");
-          document.title = `${data.name || "Restaurante"} • Menu Digital`;
+          document.title = `${data.name || "Restaurante"} • Mini Site Pro`;
           setWhatsappNumber(data.whatsappNumber || "");
           setHeaderSubtitle(data.headerSubtitle || "");
           setHeaderLogo(data.headerLogo || "");
@@ -2446,7 +2446,7 @@ export default function RestaurantMenu() {
                   className="w-full border h-11 rounded-xl px-4"
                   placeholder="Ex: Barber Shop"
                 />
-                <p className="text-xs text-zinc-500 mt-1">Deixe em branco para ocultar. Ex: "Menu Digital" ou "Catálogo"</p>
+                <p className="text-xs text-zinc-500 mt-1">Deixe em branco para ocultar. Ex: "Mini Site Pro" ou "Catálogo"</p>
               </div>
 
               <div>
@@ -5606,7 +5606,7 @@ export default function RestaurantMenu() {
                           <FileText className="size-4" /> Exportar Relatório
                         </button>
                         <button
-                          onClick={() => printReport(`Relatório ${relatorioPeriod.charAt(0).toUpperCase() + relatorioPeriod.slice(1)} - Menu Digital Pro`, reportProductsMostSold, reportStats)}
+                          onClick={() => printReport(`Relatório ${relatorioPeriod.charAt(0).toUpperCase() + relatorioPeriod.slice(1)} - Mini Site Pro`, reportProductsMostSold, reportStats)}
                           className="flex-1 flex items-center justify-center gap-2 h-11 bg-zinc-900 text-white rounded-2xl text-xs font-bold hover:bg-zinc-850 transition shadow-sm"
                         >
                           <Settings className="size-4" /> Imprimir Relatório
