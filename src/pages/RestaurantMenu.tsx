@@ -443,7 +443,7 @@ export default function RestaurantMenu() {
   const [showUpsell, setShowUpsell] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showCart, setShowCart] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>(["m7", "m12"]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
 
   // Admin states
@@ -677,8 +677,7 @@ export default function RestaurantMenu() {
         const menuSnap = await getDocs(menuRef);
         const items = menuSnap.docs.map(d => ({ id: d.id, ...d.data() } as MenuItem));
         
-        // Se estiver vazio, popula com os de exemplo só para testes (ou poderia deixar vazio)
-        setMenu(items.length > 0 ? items : INITIAL_MENU);
+        setMenu(items);
       } catch (err) {
         console.error(err);
       } finally {
