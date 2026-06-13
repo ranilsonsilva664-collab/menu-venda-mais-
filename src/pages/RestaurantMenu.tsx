@@ -2048,6 +2048,20 @@ export default function RestaurantMenu() {
                 <div className="aspect-[16/9] rounded-2xl overflow-hidden border-2 border-dashed border-zinc-300 bg-zinc-50">
                   <MediaRenderer src={heroImage} className="w-full h-full object-cover" />
                 </div>
+                <div className="mt-4">
+                  <label className="text-sm font-medium mb-1 block">Link de Vídeo (Opcional)</label>
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Cole um link do YouTube ou Instagram"
+                      className="flex-1 border h-10 rounded-xl px-4 text-sm"
+                      onBlur={(e) => {
+                        const embed = getEmbedUrl(e.target.value);
+                        if (embed && isEmbedUrl(embed)) setHeroImage(embed);
+                      }}
+                      onChange={() => {}}
+                    />
+                  </div>
+                </div>
                 <div className="flex items-center gap-3 mt-3">
                   <label className="cursor-pointer flex items-center gap-2 px-4 h-10 border rounded-xl text-sm hover:bg-zinc-50">
                     <Upload className="size-4" /> Fazer upload de imagem
@@ -2216,6 +2230,18 @@ export default function RestaurantMenu() {
                 <label className="text-sm font-medium mb-2 block">Imagem do banner</label>
                 <div className="aspect-[16/9] rounded-2xl overflow-hidden border bg-zinc-50 mb-3">
                   <MediaRenderer src={promoBanner.image} className="w-full h-full object-cover" />
+                </div>
+                <div className="mb-4">
+                  <label className="text-sm font-medium mb-1 block">Link de Vídeo (Opcional)</label>
+                  <input
+                    placeholder="Cole um link do YouTube ou Instagram"
+                    className="w-full border h-10 rounded-xl px-4 text-sm"
+                    onBlur={(e) => {
+                      const embed = getEmbedUrl(e.target.value);
+                      if (embed && isEmbedUrl(embed)) setPromoBanner({ ...promoBanner, image: embed });
+                    }}
+                    onChange={() => {}}
+                  />
                 </div>
                 <label className="cursor-pointer inline-flex items-center gap-2 px-4 h-10 border rounded-xl text-sm hover:bg-zinc-50">
                   <Upload className="size-4" /> Fazer upload de imagem
@@ -3294,6 +3320,28 @@ export default function RestaurantMenu() {
                 <p className="text-xs text-zinc-500 mb-3">
                   A primeira imagem é a capa. Passe o mouse e clique em ⭐ para definir outra como capa.
                 </p>
+                <div className="mb-3">
+                  <input
+                    placeholder="Colar link de vídeo (YouTube/Instagram) e dar Enter"
+                    className="w-full border h-10 rounded-xl px-4 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = (e.target as HTMLInputElement).value;
+                        const embed = getEmbedUrl(val);
+                        if (embed && isEmbedUrl(embed)) {
+                          if (editingItem.images.length < 10) {
+                            setEditingItem({ ...editingItem, images: [...editingItem.images, embed] });
+                          }
+                          (e.target as HTMLInputElement).value = '';
+                        } else {
+                          setToast("Link de vídeo inválido");
+                        }
+                      }
+                    }}
+                    onChange={() => {}}
+                  />
+                </div>
                 <div className="grid grid-cols-5 gap-2 mb-3">
                   {editingItem.images.map((img, idx) => (
                     <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border-2"
@@ -3597,9 +3645,34 @@ export default function RestaurantMenu() {
 
               {/* Multi-image upload for new item */}
               <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Galeria de Imagens ({(newItem.images || []).length}/10)
-                </label>
+                <div className="flex justify-between mb-2">
+                  <label className="text-sm font-medium block">
+                    Galeria de Imagens ({(newItem.images || []).length}/10)
+                  </label>
+                </div>
+                <div className="mb-3">
+                  <input
+                    placeholder="Colar link de vídeo (YouTube/Instagram) e dar Enter"
+                    className="w-full border h-10 rounded-xl px-4 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = (e.target as HTMLInputElement).value;
+                        const embed = getEmbedUrl(val);
+                        if (embed && isEmbedUrl(embed)) {
+                          const current = newItem.images || [];
+                          if (current.length < 10) {
+                            setNewItem({ ...newItem, images: [...current, embed] });
+                          }
+                          (e.target as HTMLInputElement).value = '';
+                        } else {
+                          setToast("Link de vídeo inválido");
+                        }
+                      }
+                    }}
+                    onChange={() => {}}
+                  />
+                </div>
                 <div className="grid grid-cols-5 gap-2 mb-3">
                   {(newItem.images || []).map((img, idx) => (
                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border">
