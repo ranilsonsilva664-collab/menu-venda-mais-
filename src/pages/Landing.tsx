@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, setDoc, collection, writeBatch } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { INITIAL_MENU } from "./RestaurantMenu";
 
 export default function Landing() {
   const [name, setName] = useState("");
@@ -38,16 +37,7 @@ export default function Landing() {
         heroImage: "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1600"
       });
 
-      // 2. Popular o cardápio com os dados de exemplo usando um Batch
-      const batch = writeBatch(db);
-      const menuRef = collection(restRef, "menu");
-      
-      for (const item of INITIAL_MENU) {
-        const itemDoc = doc(menuRef, item.id);
-        batch.set(itemDoc, item);
-      }
-      await batch.commit();
-
+      // Menu is initially empty. No dummy products are seeded.
       // Redirecionar para o cardápio recém criado
       navigate(`/${slug}`);
     } catch (error: any) {
@@ -120,9 +110,8 @@ export default function Landing() {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full h-11 mt-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition disabled:opacity-70 flex justify-center items-center gap-2"
           >
-            {loading ? "Criando e populando menu..." : "Criar Meu Menu Digital"}
+            {loading ? "Criando loja..." : "Criar Meu Menu Digital"}
           </button>
         </div>
       </form>
