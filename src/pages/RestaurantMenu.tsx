@@ -1314,7 +1314,7 @@ export default function RestaurantMenu() {
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#faf7f2]/80 border-b border-zinc-200/70">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex min-h-[4rem] py-2 items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               {headerLogo ? (
                 <img src={headerLogo} className="size-10 rounded-2xl object-cover shadow-lg" alt="Logo" />
