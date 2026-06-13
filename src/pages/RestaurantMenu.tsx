@@ -387,6 +387,50 @@ export const INITIAL_MENU: MenuItem[] = [
   },
 ];
 
+
+export const getEmbedUrl = (url: string) => {
+  if (!url) return url;
+  
+  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/)|youtu\.be\/)([^"&?\/\s]{11})/);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0`;
+  }
+  
+  const igMatch = url.match(/(?:instagram\.com)\/(?:p|reel|tv)\/([a-zA-Z0-9_-]+)/);
+  if (igMatch && igMatch[1]) {
+    return `https://www.instagram.com/p/${igMatch[1]}/embed`;
+  }
+  
+  const ttMatch = url.match(/(?:tiktok\.com)\/.*\/video\/(\d+)/);
+  if (ttMatch && ttMatch[1]) {
+     return `https://www.tiktok.com/embed/v2/${ttMatch[1]}`;
+  }
+
+  return url;
+};
+
+export const isEmbedUrl = (url: string) => {
+  return url?.includes('youtube.com/embed') || url?.includes('instagram.com/p/') || url?.includes('tiktok.com/embed');
+};
+
+export const MediaRenderer = ({ src, alt, className }: { src: string; alt?: string; className?: string }) => {
+  if (!src) return <div className={className} />;
+  
+  if (isEmbedUrl(src)) {
+    return (
+      <iframe
+        src={src}
+        className={className}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+    );
+  }
+  
+  return <img src={src} alt={alt || ""} className={className} />;
+};
+
 export default function RestaurantMenu() {
   const { tenantId } = useParams();
   const [loading, setLoading] = useState(true);
@@ -1451,7 +1495,7 @@ export default function RestaurantMenu() {
             
             <div className="relative w-full">
               <div className="aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden shadow-2xl shadow-amber-900/10 ring-1 ring-black/5">
-                <img src={heroImage} alt="Destaque do chef" className="w-full h-full object-cover" />
+                <MediaRenderer src={heroImage} alt="Destaque do chef" className="w-full h-full object-cover" />
               </div>
             </div>
 
@@ -1857,7 +1901,7 @@ export default function RestaurantMenu() {
               ) : (
                 cart.map((ci) => (
                   <div key={ci.id} className="p-4 flex gap-3">
-                    <img src={ci.image} alt="" className="size-16 rounded-xl object-cover" />
+                    <MediaRenderer src={ci.image} className="size-16 rounded-xl object-cover" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="font-medium leading-tight pr-2">{ci.name}</div>
@@ -2002,7 +2046,7 @@ export default function RestaurantMenu() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Imagem da Capa</label>
                 <div className="aspect-[16/9] rounded-2xl overflow-hidden border-2 border-dashed border-zinc-300 bg-zinc-50">
-                  <img src={heroImage} className="w-full h-full object-cover" />
+                  <MediaRenderer src={heroImage} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex items-center gap-3 mt-3">
                   <label className="cursor-pointer flex items-center gap-2 px-4 h-10 border rounded-xl text-sm hover:bg-zinc-50">
@@ -2171,7 +2215,7 @@ export default function RestaurantMenu() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Imagem do banner</label>
                 <div className="aspect-[16/9] rounded-2xl overflow-hidden border bg-zinc-50 mb-3">
-                  <img src={promoBanner.image} className="w-full h-full object-cover" />
+                  <MediaRenderer src={promoBanner.image} className="w-full h-full object-cover" />
                 </div>
                 <label className="cursor-pointer inline-flex items-center gap-2 px-4 h-10 border rounded-xl text-sm hover:bg-zinc-50">
                   <Upload className="size-4" /> Fazer upload de imagem
@@ -3254,7 +3298,7 @@ export default function RestaurantMenu() {
                   {editingItem.images.map((img, idx) => (
                     <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border-2"
                          style={{ borderColor: idx === 0 ? "#f59e0b" : "#e4e4e7" }}>
-                      <img src={img} className="w-full h-full object-cover" />
+                      <MediaRenderer src={img} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removeImage(idx, "edit")}
                         className="absolute top-1 right-1 size-6 grid place-items-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition"
@@ -3559,7 +3603,7 @@ export default function RestaurantMenu() {
                 <div className="grid grid-cols-5 gap-2 mb-3">
                   {(newItem.images || []).map((img, idx) => (
                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border">
-                      <img src={img} className="w-full h-full object-cover" />
+                      <MediaRenderer src={img} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removeImage(idx, "add")}
                         className="absolute top-1 right-1 size-5 grid place-items-center rounded-full bg-red-500 text-white"
@@ -3626,7 +3670,7 @@ export default function RestaurantMenu() {
             ) : (
               cart.map((ci) => (
                 <div key={ci.id} className="flex gap-4 mb-4">
-                  <img src={ci.image} className="w-16 h-16 rounded-xl object-cover" />
+                  <MediaRenderer src={ci.image} className="w-16 h-16 rounded-xl object-cover" />
                   <div className="flex-1">
                     <div className="font-medium">{ci.name}</div>
                     <div className="flex justify-between items-center mt-2">
@@ -3773,7 +3817,7 @@ export default function RestaurantMenu() {
                       idx === galleryIndex ? "border-amber-500" : "border-transparent opacity-70 hover:opacity-100"
                     )}
                   >
-                    <img src={img} className="w-full h-full object-cover" />
+                    <MediaRenderer src={img} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
