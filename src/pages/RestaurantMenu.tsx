@@ -558,7 +558,7 @@ export default function RestaurantMenu() {
   const [heroSubtitle, setHeroSubtitle] = useState(
     "Massas artesanais, pizzas no forno a lenha e crudo do litoral. Monte sua refeição perfeita com recomendações para restrições alimentares e toques do chef."
   );
-  const [heroBadge, setHeroBadge] = useState("Cardápio da estação • Inverno 2026");
+  const [heroBadge, setHeroBadge] = useState("Lançamentos da estação • Inverno 2026");
 
   const HERO_SUGGESTIONS = [
     "https://images.pexels.com/photos/3933217/pexels-photo-3933217.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=1600",
@@ -1273,7 +1273,7 @@ export default function RestaurantMenu() {
     }
     setNewItem({});
     setShowAddForm(false);
-    setToast("Novo item adicionado ao cardápio");
+    setToast("Novo item adicionado ao mini site");
   };
 
   const toggleDietary = (diet: Dietary, target: "edit" | "new") => {
@@ -1379,7 +1379,7 @@ export default function RestaurantMenu() {
                     onClick={() => setShowAdminPanel(true)}
                     className="h-9 px-3 rounded-full bg-emerald-600 text-white text-sm font-medium flex items-center gap-1.5 hover:bg-emerald-700"
                   >
-                    <Edit2 className="size-4" /> Editar Cardápio
+                    <Edit2 className="size-4" /> Editar Mini Site
                   </button>
                   <button
                     onClick={() => logoutAdmin()}
@@ -1985,7 +1985,7 @@ export default function RestaurantMenu() {
               </div>
             </div>
             <h3 className="text-center text-2xl font-semibold mb-2">Acesso Administrativo</h3>
-            <p className="text-center text-sm text-zinc-600 mb-6">Digite a senha para editar o cardápio</p>
+            <p className="text-center text-sm text-zinc-600 mb-6">Digite a senha para editar o mini site</p>
             <input
               type="password"
               value={adminPassword}
@@ -2150,7 +2150,7 @@ export default function RestaurantMenu() {
                 </div>
                 <div>
                   <div className="text-xl font-semibold">Banner de Promoção</div>
-                  <div className="text-sm text-zinc-500">Edite a oferta destacada no topo do cardápio</div>
+                  <div className="text-sm text-zinc-500">Edite a oferta destacada no topo do mini site</div>
                 </div>
               </div>
               <button onClick={() => setShowPromoEditor(false)}><X /></button>
@@ -2163,7 +2163,7 @@ export default function RestaurantMenu() {
                   onChange={(e) => setPromoBanner({ ...promoBanner, enabled: e.target.checked })}
                   className="size-5 rounded"
                 />
-                <span className="font-medium">Exibir banner promocional no cardápio</span>
+                <span className="font-medium">Exibir banner promocional no mini site</span>
               </label>
 
               <div className="grid sm:grid-cols-2 gap-4">
@@ -2341,7 +2341,7 @@ export default function RestaurantMenu() {
                 <label className="text-sm font-semibold text-zinc-700 font-medium flex items-center gap-2">
                   <Tag className="size-4 text-rose-500" /> Aviso / Banner no Topo
                 </label>
-                <p className="text-xs text-zinc-500">Adicione um banner de aviso ou promoção no topo do seu cardápio.</p>
+                <p className="text-xs text-zinc-500">Adicione um banner de aviso ou promoção no topo do seu mini site.</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -2579,7 +2579,7 @@ export default function RestaurantMenu() {
                       className="w-full border h-11 rounded-xl px-4"
                     />
                     <p className="text-xs text-zinc-500 mt-1">
-                      Digite o endereço completo. O mapa interativo do Google aparecerá no final do cardápio.
+                      Digite o endereço completo. O mapa interativo do Google aparecerá no final do mini site.
                     </p>
                   </div>
                 )}
@@ -2942,7 +2942,7 @@ export default function RestaurantMenu() {
                 onClick={() => setShowCheckout(false)}
                 className="w-full h-10 mt-2 rounded-2xl text-sm text-zinc-600"
               >
-                Voltar ao cardápio
+                Voltar ao mini site
               </button>
             </div>
           </div>
@@ -2956,7 +2956,7 @@ export default function RestaurantMenu() {
             <div className="p-6 border-b flex items-center justify-between">
               <div>
                 <div className="text-xl font-semibold">Painel Administrativo</div>
-                <div className="text-sm text-zinc-500">Edite o cardápio em tempo real</div>
+                <div className="text-sm text-zinc-500">Edite o mini site em tempo real</div>
               </div>
               <div className="flex flex-wrap gap-2 justify-end">
                 <button
@@ -3744,7 +3744,7 @@ export default function RestaurantMenu() {
                 onClick={addNewItem}
                 className="flex-1 h-12 rounded-2xl bg-emerald-600 text-white"
               >
-                Adicionar ao Cardápio
+                Adicionar ao Mini Site
               </button>
             </div>
           </div>

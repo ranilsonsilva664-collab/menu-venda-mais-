@@ -38,10 +38,10 @@ export default function Landing() {
       });
 
       // Menu is initially empty. No dummy products are seeded.
-      // Redirecionar para o cardápio recém criado
+      // Redirecionar para o mini site recém criado
       navigate(`/${slug}`);
     } catch (error: any) {
-      console.error("Erro ao criar cardápio:", error);
+      console.error("Erro ao criar mini site:", error);
       alert("Ocorreu um erro ao criar a loja: " + (error.message || "Erro desconhecido"));
     } finally {
       setLoading(false);
