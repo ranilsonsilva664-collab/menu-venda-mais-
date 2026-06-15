@@ -2652,6 +2652,16 @@ export default function RestaurantMenu() {
               <button onClick={() => setShowReviewsEditor(false)}><X /></button>
             </div>
             <div className="p-6 space-y-5">
+              <label className="flex items-center justify-between cursor-pointer bg-zinc-50 p-4 rounded-2xl border">
+                <div>
+                  <div className="font-semibold text-zinc-900">Exibir seção de avaliações</div>
+                  <div className="text-xs text-zinc-500 mt-0.5">Mostra a barra de avaliações na página inicial</div>
+                </div>
+                <div className="relative inline-flex items-center">
+                  <input type="checkbox" className="sr-only peer" checked={showReviews} onChange={(e) => setShowReviews(e.target.checked)} />
+                  <div className="w-11 h-6 bg-zinc-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </div>
+              </label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-1 block">Nota (ex: 4.9)</label>
