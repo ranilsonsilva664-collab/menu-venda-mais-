@@ -2724,9 +2724,19 @@ export default function RestaurantMenu() {
                 Fechar
               </button>
               <button
-                onClick={() => {
-                  setToast("Estatísticas de avaliações salvas!");
-                  setShowReviewsEditor(false);
+                onClick={async () => {
+                  try {
+                    if (tenantId) {
+                      await setDoc(doc(db, "restaurants", tenantId), { 
+                        showReviews, 
+                        reviews 
+                      }, { merge: true });
+                    }
+                    setToast("Estatísticas de avaliações salvas!");
+                    setShowReviewsEditor(false);
+                  } catch (err) {
+                    setToast("Erro ao salvar avaliações.");
+                  }
                 }}
                 className="px-5 h-11 rounded-2xl bg-zinc-900 text-white"
               >
