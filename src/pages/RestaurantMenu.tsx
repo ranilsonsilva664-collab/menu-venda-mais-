@@ -508,6 +508,7 @@ export default function RestaurantMenu() {
   const [comprarButtonText, setComprarButtonText] = useState("Comprar");
   const [locationAddress, setLocationAddress] = useState("");
   const [showLocationMap, setShowLocationMap] = useState(false);
+  const [showReviews, setShowReviews] = useState(true);
   const [enableInventory, setEnableInventory] = useState(false);
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>({ enabled: false, neighborhoods: [] });
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState("");
@@ -663,6 +664,8 @@ export default function RestaurantMenu() {
           if (data.storeType) setStoreType(data.storeType);
           if (data.locationAddress) setLocationAddress(data.locationAddress);
           if (data.showLocationMap !== undefined) setShowLocationMap(data.showLocationMap);
+          if (data.showReviews !== undefined) setShowReviews(data.showReviews);
+          if (data.reviews !== undefined) setReviews(data.reviews);
           if (data.enableInventory !== undefined) setEnableInventory(data.enableInventory);
           if (data.comprarButtonEnabled !== undefined) setComprarButtonEnabled(data.comprarButtonEnabled);
           if (data.comprarButtonText !== undefined) setComprarButtonText(data.comprarButtonText);
@@ -1592,52 +1595,54 @@ export default function RestaurantMenu() {
       )}
 
       {/* REVIEWS / TRUST BAR */}
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="bg-white border border-zinc-200 shadow-sm rounded-3xl px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-8 text-center sm:text-left">
-            <div>
-              <div className="flex items-center justify-center sm:justify-start gap-1 text-[var(--theme-color)] mb-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="size-4 fill-current" />
-                ))}
+      {showReviews && (
+        <section className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-white border border-zinc-200 shadow-sm rounded-3xl px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-8 text-center sm:text-left">
+              <div>
+                <div className="flex items-center justify-center sm:justify-start gap-1 text-[var(--theme-color)] mb-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="size-4 fill-current" />
+                  ))}
+                </div>
+                <div className="text-3xl font-bold tabular-nums text-zinc-900 tracking-tighter">
+                  {reviews.rating}
+                  <span className="text-xl font-medium text-zinc-400">/5</span>
+                </div>
               </div>
-              <div className="text-3xl font-bold tabular-nums text-zinc-900 tracking-tighter">
-                {reviews.rating}
-                <span className="text-xl font-medium text-zinc-400">/5</span>
+
+              <div className="h-9 w-px bg-zinc-200 hidden sm:block" />
+
+              <div className="text-left">
+                <div className="text-2xl font-semibold tabular-nums tracking-tighter text-zinc-900">
+                  {reviews.totalOrders.toLocaleString("pt-BR")}
+                </div>
+                <div className="text-xs text-zinc-500 font-medium -mt-0.5">pedidos realizados</div>
               </div>
             </div>
 
-            <div className="h-9 w-px bg-zinc-200 hidden sm:block" />
-
-            <div className="text-left">
-              <div className="text-2xl font-semibold tabular-nums tracking-tighter text-zinc-900">
-                {reviews.totalOrders.toLocaleString("pt-BR")}
+            <div className="text-center sm:text-right">
+              <div className="inline-flex items-center justify-center gap-1 text-emerald-600 font-bold text-xl">
+                {reviews.recommendation}%
               </div>
-              <div className="text-xs text-zinc-500 font-medium -mt-0.5">pedidos realizados</div>
+              <div className="text-xs text-emerald-700 font-medium">{reviews.text}</div>
             </div>
-          </div>
 
-          <div className="text-center sm:text-right">
-            <div className="inline-flex items-center justify-center gap-1 text-emerald-600 font-bold text-xl">
-              {reviews.recommendation}%
+            <div className="text-xs px-4 py-1.5 bg-zinc-100 rounded-full text-zinc-600 font-medium hidden md:block">
+              Baseado em {reviews.totalReviews.toLocaleString("pt-BR")} avaliações verificadas
             </div>
-            <div className="text-xs text-emerald-700 font-medium">{reviews.text}</div>
-          </div>
 
-          <div className="text-xs px-4 py-1.5 bg-zinc-100 rounded-full text-zinc-600 font-medium hidden md:block">
-            Baseado em {reviews.totalReviews.toLocaleString("pt-BR")} avaliações verificadas
+            {isAdmin && (
+              <button
+                onClick={() => setShowReviewsEditor(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-zinc-300 rounded-full hover:bg-zinc-50 font-medium"
+              >
+                <Edit2 className="size-3.5" /> Editar Avaliações
+              </button>
+            )}
           </div>
-
-          {isAdmin && (
-            <button
-              onClick={() => setShowReviewsEditor(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-zinc-300 rounded-full hover:bg-zinc-50 font-medium"
-            >
-              <Edit2 className="size-3.5" /> Editar Avaliações
-            </button>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Main Menu Content */}
       <main className={cn(
